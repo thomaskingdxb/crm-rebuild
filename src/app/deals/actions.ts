@@ -54,10 +54,12 @@ export async function createDealAction(formData: FormData) {
   if (error) throw error;
 
   revalidatePath('/deals');
-  redirect(`/deals/${id}`);
+  redirect('/deals');
 }
 
-export async function updateDealAction(id: string, formData: FormData) {
+// Modal variant — same DB work as createDealAction, but no redirect, so the
+// calling client component can close the modal and refresh in place.
+export async function updateDealModalAction(id: string, formData: FormData) {
   const fields = readDealForm(formData);
 
   if (fields.deal_stage_id == null) {
@@ -67,17 +69,17 @@ export async function updateDealAction(id: string, formData: FormData) {
   const { error } = await supabase.from('deals').update(fields).eq('id', id);
   if (error) throw error;
 
-  revalidatePath(`/deals/${id}`);
   revalidatePath('/deals');
-  redirect(`/deals/${id}`);
+  if (fields.owner_id) revalidatePath(`/clients/${fields.owner_id}`);
+  if (fields.buyer_id) revalidatePath(`/clients/${fields.buyer_id}`);
+  if (fields.property_id) revalidatePath(`/properties/${fields.property_id}`);
 }
 
-export async function deleteDealAction(id: string) {
+export async function deleteDealModalAction(id: string) {
   const { error } = await supabase.from('deals').delete().eq('id', id);
   if (error) throw error;
 
   revalidatePath('/deals');
-  redirect('/deals');
 }
 
 // Called from the Kanban board when a card is dragged into a new stage column.

@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { getClient, getClientLookups, getClientActivities, getActivityTypes, getClientsBasic } from '@/lib/clients';
 import { getClientTasks, getTaskTypes } from '@/lib/tasks';
 import { getClientEnquiries } from '@/lib/enquiries';
-import { getClientProperties } from '@/lib/properties';
-import { getClientDeals } from '@/lib/deals';
+import { getClientProperties, getPropertiesBasic } from '@/lib/properties';
+import { getClientDeals, getDealLookups } from '@/lib/deals';
 import { updateClientAction, deleteClientAction } from '@/app/clients/actions';
 import { daysSince } from '@/lib/date';
 import { telHref, whatsappHref } from '@/lib/phone';
@@ -25,7 +25,7 @@ const sectionClass = 'surface-card p-6';
 
 export default async function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals] = await Promise.all([
+  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties] = await Promise.all([
     getClient(id),
     getClientLookups(),
     getClientActivities(id),
@@ -36,6 +36,8 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
     getClientEnquiries(id),
     getClientProperties(id),
     getClientDeals(id),
+    getDealLookups(),
+    getPropertiesBasic(),
   ]);
 
   if (!client) notFound();
@@ -261,7 +263,16 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
             ) : (
               <div className="flex flex-col gap-4">
                 {deals.map((d) => (
-                  <DealCard key={d.id} deal={d} role={d.role} />
+                  <DealCard
+                    key={d.id}
+                    deal={d}
+                    role={d.role}
+                    dealTypes={dealLookups.dealTypes}
+                    saleStages={dealLookups.saleStages}
+                    rentalStages={dealLookups.rentalStages}
+                    clients={allClients}
+                    properties={allProperties}
+                  />
                 ))}
               </div>
             )}

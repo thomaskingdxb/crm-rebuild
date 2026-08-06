@@ -15,6 +15,11 @@ function Lane({
   title,
   stages,
   deals,
+  dealTypes,
+  saleStages,
+  rentalStages,
+  clients,
+  properties,
   onCardDragStart,
   onDrop,
   dragOverStageId,
@@ -23,6 +28,11 @@ function Lane({
   title: string;
   stages: DealStage[];
   deals: DealWithRelations[];
+  dealTypes: Lookup[];
+  saleStages: DealStage[];
+  rentalStages: DealStage[];
+  clients: { id: string; name: string }[];
+  properties: { id: string; building: string | null; unit_number: string | null }[];
   onCardDragStart: (e: React.DragEvent, dealId: string) => void;
   onDrop: (dealId: string, stageId: number) => void;
   dragOverStageId: number | null;
@@ -61,7 +71,16 @@ function Lane({
               </p>
               <div className="flex flex-col gap-2">
                 {stageDeals.map((d) => (
-                  <DealKanbanCard key={d.id} deal={d} onDragStart={onCardDragStart} />
+                  <DealKanbanCard
+                    key={d.id}
+                    deal={d}
+                    dealTypes={dealTypes}
+                    saleStages={saleStages}
+                    rentalStages={rentalStages}
+                    clients={clients}
+                    properties={properties}
+                    onDragStart={onCardDragStart}
+                  />
                 ))}
                 {stageDeals.length === 0 && <p className="py-2 text-center text-xs text-zinc-600">—</p>}
               </div>
@@ -78,11 +97,15 @@ export default function DealsKanban({
   dealTypes,
   saleStages,
   rentalStages,
+  clients,
+  properties,
 }: {
   deals: DealWithRelations[];
   dealTypes: Lookup[];
   saleStages: DealStage[];
   rentalStages: DealStage[];
+  clients: { id: string; name: string }[];
+  properties: { id: string; building: string | null; unit_number: string | null }[];
 }) {
   const [localDeals, setLocalDeals] = useState(deals);
   const [dragOverStageId, setDragOverStageId] = useState<number | null>(null);
@@ -186,6 +209,11 @@ export default function DealsKanban({
           title="Sale"
           stages={saleStages}
           deals={saleDeals}
+          dealTypes={dealTypes}
+          saleStages={saleStages}
+          rentalStages={rentalStages}
+          clients={clients}
+          properties={properties}
           onCardDragStart={handleCardDragStart}
           onDrop={handleDrop}
           dragOverStageId={dragOverStageId}
@@ -195,6 +223,11 @@ export default function DealsKanban({
           title="Rental"
           stages={rentalStages}
           deals={rentalDeals}
+          dealTypes={dealTypes}
+          saleStages={saleStages}
+          rentalStages={rentalStages}
+          clients={clients}
+          properties={properties}
           onCardDragStart={handleCardDragStart}
           onDrop={handleDrop}
           dragOverStageId={dragOverStageId}
@@ -209,7 +242,16 @@ export default function DealsKanban({
             <p className="mb-3 text-xs text-zinc-500">These deals have no deal type set, so they can&apos;t be placed in Sale or Rental yet. Open one and set its deal type.</p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {unassignedDeals.map((d) => (
-                <DealKanbanCard key={d.id} deal={d} onDragStart={handleCardDragStart} />
+                <DealKanbanCard
+                  key={d.id}
+                  deal={d}
+                  dealTypes={dealTypes}
+                  saleStages={saleStages}
+                  rentalStages={rentalStages}
+                  clients={clients}
+                  properties={properties}
+                  onDragStart={handleCardDragStart}
+                />
               ))}
             </div>
           </div>

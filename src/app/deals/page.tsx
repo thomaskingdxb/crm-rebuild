@@ -1,10 +1,17 @@
 import Link from 'next/link';
 import { getDeals, getDealLookups, computeDealStats } from '@/lib/deals';
+import { getClientsBasic } from '@/lib/clients';
+import { getPropertiesBasic } from '@/lib/properties';
 import DealsKanban from '@/components/DealsKanban';
 import DealStatsCards from '@/components/DealStatsCards';
 
 export default async function DealsPage() {
-  const [deals, lookups] = await Promise.all([getDeals(), getDealLookups()]);
+  const [deals, lookups, clients, properties] = await Promise.all([
+    getDeals(),
+    getDealLookups(),
+    getClientsBasic(),
+    getPropertiesBasic(),
+  ]);
   const stats = computeDealStats(deals);
 
   return (
@@ -25,7 +32,14 @@ export default async function DealsPage() {
 
         <DealStatsCards stats={stats} />
 
-        <DealsKanban deals={deals} dealTypes={lookups.dealTypes} saleStages={lookups.saleStages} rentalStages={lookups.rentalStages} />
+        <DealsKanban
+          deals={deals}
+          dealTypes={lookups.dealTypes}
+          saleStages={lookups.saleStages}
+          rentalStages={lookups.rentalStages}
+          clients={clients}
+          properties={properties}
+        />
       </div>
     </div>
   );

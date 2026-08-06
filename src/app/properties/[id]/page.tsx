@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getProperty, getPropertyLookups } from '@/lib/properties';
+import { getProperty, getPropertyLookups, getPropertiesBasic } from '@/lib/properties';
 import { getClientsBasic } from '@/lib/clients';
 import { getPropertyEnquiries } from '@/lib/enquiries';
-import { getPropertyDeals } from '@/lib/deals';
+import { getPropertyDeals, getDealLookups } from '@/lib/deals';
 import { updatePropertyAction, deletePropertyAction } from '@/app/properties/actions';
 import DeleteButton from '@/components/DeleteButton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -35,12 +35,14 @@ function PillGroup({ name, options, selectedIds }: { name: string; options: { id
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [property, lookups, clients, enquiries, deals] = await Promise.all([
+  const [property, lookups, clients, enquiries, deals, dealLookups, allProperties] = await Promise.all([
     getProperty(id),
     getPropertyLookups(),
     getClientsBasic(),
     getPropertyEnquiries(id),
     getPropertyDeals(id),
+    getDealLookups(),
+    getPropertiesBasic(),
   ]);
 
   if (!property) notFound();
@@ -229,7 +231,15 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             ) : (
               <div className="flex flex-col gap-4">
                 {deals.map((d) => (
-                  <DealCard key={d.id} deal={d} />
+                  <DealCard
+                    key={d.id}
+                    deal={d}
+                    dealTypes={dealLookups.dealTypes}
+                    saleStages={dealLookups.saleStages}
+                    rentalStages={dealLookups.rentalStages}
+                    clients={clients}
+                    properties={allProperties}
+                  />
                 ))}
               </div>
             )}
