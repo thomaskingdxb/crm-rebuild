@@ -1,3 +1,4 @@
+import type React from 'react';
 import Link from 'next/link';
 import { getDashboardStats } from '@/lib/dashboard';
 
@@ -11,8 +12,73 @@ function money(n: number): string {
   return `AED ${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
+const iconProps = {
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.5,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
+const ICONS: Record<string, React.ReactNode> = {
+  clients: (
+    <svg {...iconProps}>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+      <circle cx="10" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  properties: (
+    <svg {...iconProps}>
+      <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z" />
+    </svg>
+  ),
+  enquiries: (
+    <svg {...iconProps}>
+      <path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+    </svg>
+  ),
+  followUps: (
+    <svg {...iconProps}>
+      <path d="M12 8v4l3 2" />
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  ),
+  tasks: (
+    <svg {...iconProps}>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <path d="m8 12 3 3 5-6" />
+    </svg>
+  ),
+  value: (
+    <svg {...iconProps}>
+      <path d="M2 8h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2Z" />
+      <path d="M2 8V6a2 2 0 0 1 2-2h12" />
+      <circle cx="15" cy="14" r="1.5" />
+    </svg>
+  ),
+  commission: (
+    <svg {...iconProps}>
+      <path d="M19 5 5 19" />
+      <circle cx="6.5" cy="6.5" r="2.5" />
+      <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
+  ),
+};
+
+function IconBadge({ icon }: { icon: keyof typeof ICONS }) {
+  return (
+    <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20 [&_svg]:h-5 [&_svg]:w-5">
+      {ICONS[icon]}
+    </div>
+  );
+}
+
 function StatCard({
   href,
+  icon,
   title,
   value,
   valueClassName,
@@ -20,6 +86,7 @@ function StatCard({
   breakdown,
 }: {
   href: string;
+  icon: keyof typeof ICONS;
   title: string;
   value: string;
   valueClassName?: string;
@@ -27,7 +94,8 @@ function StatCard({
   breakdown?: { name: string; count: number }[];
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <IconBadge icon={icon} />
       <p className="text-xs font-medium text-zinc-400">{title}</p>
       <p className={`mt-1 text-3xl font-semibold ${valueClassName ?? 'text-zinc-100'}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-500">{sub}</p>}
@@ -47,6 +115,7 @@ function StatCard({
 
 function SplitStatCard({
   href,
+  icon,
   title,
   left,
   leftLabel,
@@ -54,6 +123,7 @@ function SplitStatCard({
   rightLabel,
 }: {
   href: string;
+  icon: keyof typeof ICONS;
   title: string;
   left: string;
   leftLabel: string;
@@ -61,7 +131,8 @@ function SplitStatCard({
   rightLabel: string;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <IconBadge icon={icon} />
       <p className="mb-3 text-xs font-medium text-zinc-400">{title}</p>
       <div className="flex items-end justify-between gap-4">
         <div>
@@ -97,7 +168,8 @@ function ValueStatCard({
   rightPending: number;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <IconBadge icon="value" />
       <p className="mb-3 text-xs font-medium text-zinc-400">{title}</p>
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -129,7 +201,8 @@ function CommissionStatCard({
   netPending: number;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <IconBadge icon="commission" />
       <p className="mb-3 text-xs font-medium text-zinc-400">Total Commission</p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
@@ -163,11 +236,12 @@ export default async function DashboardPage() {
         <p className="mb-6 text-sm text-zinc-500">Overview across clients, pipeline, deals, and tasks.</p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard href="/clients" title="Total Clients" value={`${stats.totalClients}`} breakdown={stats.statusCounts} />
-          <StatCard href="/properties" title="Total Properties" value={`${stats.totalProperties}`} />
-          <StatCard href="/pipeline" title="Active Enquiries" value={`${stats.activeEnquiries}`} valueClassName="text-blue-400" />
+          <StatCard href="/clients" icon="clients" title="Total Clients" value={`${stats.totalClients}`} valueClassName="text-blue-300" breakdown={stats.statusCounts} />
+          <StatCard href="/properties" icon="properties" title="Total Properties" value={`${stats.totalProperties}`} valueClassName="text-blue-300" />
+          <StatCard href="/pipeline" icon="enquiries" title="Active Enquiries" value={`${stats.activeEnquiries}`} valueClassName="text-blue-400" />
           <SplitStatCard
             href="/follow-ups"
+            icon="followUps"
             title="Follow Ups"
             left={`${stats.followUpsOverdue}`}
             leftLabel="Overdue"
@@ -176,6 +250,7 @@ export default async function DashboardPage() {
           />
           <SplitStatCard
             href="/tasks"
+            icon="tasks"
             title="Tasks"
             left={`${stats.tasksOverdue}`}
             leftLabel="Overdue"
