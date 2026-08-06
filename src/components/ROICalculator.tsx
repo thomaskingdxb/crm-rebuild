@@ -27,6 +27,9 @@ export default function ROICalculator({
 
   const [owner, setOwner] = useState('');
   const [building, setBuilding] = useState('');
+  const [unitNumber, setUnitNumber] = useState('');
+  const [includeClientName, setIncludeClientName] = useState(true);
+  const [includeUnitNumber, setIncludeUnitNumber] = useState(true);
   const [location, setLocation] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [sqft, setSqft] = useState('');
@@ -49,7 +52,8 @@ export default function ROICalculator({
       .then((property) => {
         if (!property) return;
         setOwner(property.clients?.name ?? '');
-        setBuilding(`${property.building ?? ''}${property.unit_number ? ` - ${property.unit_number}` : ''}`.trim());
+        setBuilding(property.building ?? '');
+        setUnitNumber(property.unit_number ?? '');
         setLocation(property.property_areas[0]?.areas.name ?? '');
         setBedrooms(property.property_bedroom_counts[0]?.bedroom_counts.name ?? '');
         setSqft(property.sqft != null ? String(property.sqft) : '');
@@ -95,43 +99,66 @@ export default function ROICalculator({
       const contentW = pageW - marginX * 2;
       let y = 20;
 
-      const bg: [number, number, number] = [13, 17, 25];
-      const card: [number, number, number] = [22, 26, 36];
-      const border: [number, number, number] = [45, 50, 62];
-      const textLight: [number, number, number] = [240, 240, 245];
-      const textMuted: [number, number, number] = [150, 150, 160];
-      const blue: [number, number, number] = [96, 165, 250];
-      const emerald: [number, number, number] = [52, 211, 153];
+      const bg: [number, number, number] = [13, 27, 46];
+      const card: [number, number, number] = [26, 45, 71];
+      const borderFaint: [number, number, number] = [47, 51, 50];
+      const borderCard: [number, number, number] = [73, 68, 54];
+      const borderLine: [number, number, number] = [64, 62, 53];
+      const textLight: [number, number, number] = [240, 230, 208];
+      const textMuted: [number, number, number] = [155, 168, 184];
+      const textFaint: [number, number, number] = [107, 120, 136];
+      const gold: [number, number, number] = [184, 145, 68];
+      const goldBright: [number, number, number] = [212, 168, 83];
+      const emerald: [number, number, number] = [126, 203, 126];
 
       pdf.setFillColor(...bg);
       pdf.rect(0, 0, pageW, 297, 'F');
 
-      pdf.setTextColor(...textLight);
+      // Header: logo + title
+      try {
+        const logoResp = await fetch('/branding/lig-logo.png');
+        const logoBlob = await logoResp.blob();
+        const logoDataUrl: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(logoBlob);
+        });
+        const logoW = 28;
+        const logoH = logoW * (2250 / 7500);
+        pdf.addImage(logoDataUrl, 'PNG', marginX, y - 6, logoW, logoH);
+      } catch {
+        // logo optional — continue without it if it fails to load
+      }
+
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
-      pdf.text('ROI Calculator', marginX, y);
-      y += 6;
+      pdf.setFontSize(15);
+      pdf.setTextColor(...goldBright);
+      pdf.text('Property ROI Calculator', pageW - marginX, y, { align: 'right' });
+      y += 5.5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
-      pdf.text('Luxury Invest Group', marginX, y);
-      y += 10;
+      pdf.text('Prepared by Thomas King', pageW - marginX, y, { align: 'right' });
+      y += 14;
 
-      pdf.setTextColor(...textMuted);
+      const displayBuilding = includeUnitNumber && unitNumber ? `${building || '—'} - ${unitNumber}` : building || '—';
+
       pdf.setFontSize(8);
+      pdf.setTextColor(...gold);
       pdf.text('PREPARED FOR', marginX, y);
       pdf.text('PROPERTY', marginX + contentW / 2, y);
-      y += 5;
-      pdf.setTextColor(...textLight);
+      y += 5.5;
       pdf.setFontSize(11);
-      pdf.text(owner || '—', marginX, y);
-      pdf.text(building || '—', marginX + contentW / 2, y);
-      y += 10;
+      pdf.setTextColor(...textLight);
+      pdf.text(includeClientName ? owner || '—' : '—', marginX, y);
+      pdf.text(displayBuilding, marginX + contentW / 2, y);
+      y += 9;
 
       function sectionLabel(text: string) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
-        pdf.setTextColor(...blue);
+        pdf.setTextColor(...gold);
         pdf.text(text.toUpperCase(), marginX, y);
         y += 6;
         pdf.setFont('helvetica', 'normal');
@@ -139,39 +166,57 @@ export default function ROICalculator({
 
       function cardStart(height: number) {
         pdf.setFillColor(...card);
-        pdf.setDrawColor(...border);
+        pdf.setDrawColor(...borderCard);
         pdf.roundedRect(marginX, y, contentW, height, 2, 2, 'FD');
       }
 
-      function row(label: string, value: string, rowY: number, bold = false) {
+      function row(label: string, value: string, rowY: number, bold = false, color: [number, number, number] = textLight) {
         pdf.setFontSize(9.5);
         pdf.setTextColor(...textMuted);
         pdf.text(label, marginX + 4, rowY);
         pdf.setFont('helvetica', bold ? 'bold' : 'normal');
-        pdf.setTextColor(...textLight);
+        pdf.setTextColor(...color);
         pdf.text(value, marginX + contentW - 4, rowY, { align: 'right' });
+        pdf.setFont('helvetica', 'normal');
+      }
+
+      function colStat(label: string, value: string, colX: number, colY: number) {
+        pdf.setFontSize(7);
+        pdf.setTextColor(...textFaint);
+        pdf.text(label.toUpperCase(), colX, colY);
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setTextColor(...textLight);
+        pdf.text(value, colX, colY + 5);
         pdf.setFont('helvetica', 'normal');
       }
 
       // Property details
       sectionLabel('Property Details');
-      cardStart(30);
-      let ry = y + 6;
-      row('Location', location || '—', ry);
-      row('Bedrooms', bedrooms || '—', ry, false);
-      ry += 6;
-      row('Size', sqft ? `${sqft} sqft` : '—', ry);
-      ry += 6;
-      row('Purchase price', fmt(calc.price), ry);
-      ry += 6;
-      row('Purchase price incl. DLD (4%)', fmt(calc.priceInclDld), ry);
-      y += 36;
+      cardStart(34);
+      const colW = contentW / 4;
+      colStat('Location', location || '—', marginX + 4, y + 7);
+      colStat('Bedrooms', bedrooms || '—', marginX + colW + 4, y + 7);
+      colStat('Size', sqft ? `${sqft} sqft` : '—', marginX + colW * 2 + 4, y + 7);
+      colStat('Purchase price', fmt(calc.price), marginX + colW * 3 + 4, y + 7);
+
+      const subY = y + 17;
+      const subBoxW = (contentW - 12) / 2;
+      pdf.setFillColor(13, 27, 46);
+      pdf.setDrawColor(...borderFaint);
+      pdf.roundedRect(marginX + 4, subY, subBoxW, 12, 1.5, 1.5, 'FD');
+      pdf.roundedRect(marginX + subBoxW + 8, subY, subBoxW, 12, 1.5, 1.5, 'FD');
+      colStat('DLD 4%', fmt(calc.dld), marginX + 8, subY + 8);
+      colStat('Purchase price incl. DLD', fmt(calc.priceInclDld), marginX + subBoxW + 12, subY + 8);
+      y += 40;
 
       // Annual costs
       sectionLabel('Annual Costs');
       cardStart(38);
-      ry = y + 6;
-      row('Service charges', fmt(calc.scAnnual), ry);
+      let ry = y + 6;
+      row('Service charges per sqft', `AED ${scPsf || 0}/sqft`, ry);
+      ry += 6;
+      row('Annual service charges', fmt(calc.scAnnual), ry);
       ry += 6;
       row('Management fee', fmt(calc.mgmt), ry);
       ry += 6;
@@ -179,9 +224,9 @@ export default function ROICalculator({
       ry += 6;
       row('Other costs', fmt(parseFloat(otherCosts) || 0), ry);
       ry += 7;
-      pdf.setDrawColor(...border);
+      pdf.setDrawColor(...borderLine);
       pdf.line(marginX + 4, ry - 4, marginX + contentW - 4, ry - 4);
-      row('Total annual costs', fmt(calc.totalCosts), ry, true);
+      row('Total annual costs', fmt(calc.totalCosts), ry, true, goldBright);
       y += 44;
 
       // Rental income
@@ -190,29 +235,28 @@ export default function ROICalculator({
       ry = y + 6;
       row('Gross rental income', fmt(parseFloat(grossRent) || 0), ry);
       ry += 7;
-      pdf.setDrawColor(...border);
+      pdf.setDrawColor(...borderLine);
       pdf.line(marginX + 4, ry - 4, marginX + contentW - 4, ry - 4);
-      pdf.setTextColor(...emerald);
-      row('Net rental income', fmt(calc.netRent), ry, true);
-      pdf.setTextColor(...textLight);
+      row('Net rental income', fmt(calc.netRent), ry, true, emerald);
       y += 26;
 
       // Results
       sectionLabel('Results');
       const boxW = (contentW - 4) / 2;
       const boxH = 20;
-      pdf.setFillColor(30, 41, 59);
-      pdf.setDrawColor(...blue);
+      pdf.setFillColor(41, 34, 20);
+      pdf.setDrawColor(...gold);
       pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
-      pdf.setTextColor(...blue);
+      pdf.setTextColor(...gold);
       pdf.text('GROSS ROI', marginX + 4, y + 7);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(...goldBright);
       pdf.text(fmtP(calc.grossROI), marginX + 4, y + 15);
 
       pdf.setFont('helvetica', 'normal');
-      pdf.setFillColor(20, 40, 34);
+      pdf.setFillColor(20, 40, 20);
       pdf.setDrawColor(...emerald);
       pdf.roundedRect(marginX + boxW + 4, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
@@ -225,19 +269,50 @@ export default function ROICalculator({
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
-      pdf.setTextColor(...textMuted);
+      pdf.setTextColor(...textFaint);
       const note = `Gross ROI = gross rent / purchase price. Net ROI = net income / purchase price (${
         roiMode === 'excl' ? 'excl DLD' : 'incl DLD'
       }). Figures are estimates - always consult a licensed advisor.`;
       pdf.text(pdf.splitTextToSize(note, contentW), marginX, y);
       y += 14;
 
-      pdf.setDrawColor(...border);
+      // Footer
+      pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
-      y += 6;
-      pdf.setFontSize(8);
+      y += 7;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(10);
+      pdf.setTextColor(...goldBright);
+      pdf.text('Thomas King', marginX, y);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.setTextColor(...textFaint);
+      pdf.text('SALES ADVISOR', marginX, y + 4.5);
+
+      const centerX = pageW / 2;
+      pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
-      pdf.text('Thomas King · Luxury Invest Group', marginX, y);
+      pdf.text('+971 50 167 0251', centerX, y - 3, { align: 'center' });
+      pdf.text('Thomas.king@luxuryinvestgroup.com', centerX, y + 1.5, { align: 'center' });
+      pdf.text('luxuryinvestgroup.com', centerX, y + 6, { align: 'center' });
+
+      pdf.setFontSize(8);
+      pdf.setTextColor(...gold);
+      pdf.text('Instagram', pageW - marginX - 22, y - 3, { align: 'right' });
+      pdf.setTextColor(...textMuted);
+      pdf.text('@t.king.lux', pageW - marginX, y - 3, { align: 'right' });
+      pdf.setTextColor(...gold);
+      pdf.text('TikTok', pageW - marginX - 22, y + 1.5, { align: 'right' });
+      pdf.setTextColor(...textMuted);
+      pdf.text('@t.king.lux', pageW - marginX, y + 1.5, { align: 'right' });
+
+      y += 14;
+      pdf.setDrawColor(...borderFaint);
+      pdf.line(marginX, y, pageW - marginX, y);
+      y += 5;
+      pdf.setFontSize(8);
+      pdf.setTextColor(...textFaint);
+      pdf.text('Luxury Invest Group · 2605 & 2611, Rise Tower, Tecom, Al Thanyah, Dubai, UAE', centerX, y, { align: 'center' });
 
       pdf.save(`ROI-Calculator-${(building || 'Property').replace(/[^a-z0-9]+/gi, '-')}.pdf`);
     } finally {
@@ -270,8 +345,12 @@ export default function ROICalculator({
               <input value={owner} onChange={(e) => setOwner(e.target.value)} className={inputClass} placeholder="Client name" />
             </div>
             <div>
-              <label className={labelClass}>Property</label>
-              <input value={building} onChange={(e) => setBuilding(e.target.value)} className={inputClass} placeholder="Building / unit" />
+              <label className={labelClass}>Building</label>
+              <input value={building} onChange={(e) => setBuilding(e.target.value)} className={inputClass} placeholder="Building name" />
+            </div>
+            <div>
+              <label className={labelClass}>Unit number</label>
+              <input value={unitNumber} onChange={(e) => setUnitNumber(e.target.value)} className={inputClass} placeholder="Unit number" />
             </div>
             <div>
               <label className={labelClass}>Location / Area</label>
@@ -370,7 +449,9 @@ export default function ROICalculator({
         <div className="surface-card-accent flex flex-col gap-4 p-6">
           <div>
             <p className="text-xs font-medium text-zinc-500">{owner || 'Prepared for —'}</p>
-            <p className="text-sm font-semibold text-zinc-100">{building || 'Property —'}</p>
+            <p className="text-sm font-semibold text-zinc-100">
+              {building || unitNumber ? `${building}${unitNumber ? ` - ${unitNumber}` : ''}` : 'Property —'}
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
@@ -440,6 +521,30 @@ export default function ROICalculator({
             Gross ROI = gross rent ÷ purchase price. Net ROI = net income ÷ purchase price ({roiMode === 'excl' ? 'excl DLD' : 'incl DLD'}). Figures are
             estimates — always consult a licensed advisor.
           </p>
+        </div>
+
+        <div className="surface-card p-4">
+          <p className="mb-2 text-xs font-medium text-zinc-400">Include in PDF export</p>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={includeClientName}
+                onChange={(e) => setIncludeClientName(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-white/5 accent-blue-500"
+              />
+              Client name
+            </label>
+            <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={includeUnitNumber}
+                onChange={(e) => setIncludeUnitNumber(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-white/5 accent-blue-500"
+              />
+              Unit number
+            </label>
+          </div>
         </div>
 
         <button
