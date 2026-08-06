@@ -70,8 +70,17 @@ const ICONS: Record<string, React.ReactNode> = {
 
 function IconBadge({ icon }: { icon: keyof typeof ICONS }) {
   return (
-    <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20 [&_svg]:h-5 [&_svg]:w-5">
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20 [&_svg]:h-4 [&_svg]:w-4">
       {ICONS[icon]}
+    </div>
+  );
+}
+
+function CardHeader({ icon, title }: { icon: keyof typeof ICONS; title: string }) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <IconBadge icon={icon} />
+      <p className="text-xs font-medium text-zinc-400">{title}</p>
     </div>
   );
 }
@@ -94,10 +103,9 @@ function StatCard({
   breakdown?: { name: string; count: number }[];
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
-      <IconBadge icon={icon} />
-      <p className="text-xs font-medium text-zinc-400">{title}</p>
-      <p className={`mt-1 text-3xl font-semibold ${valueClassName ?? 'text-zinc-100'}`}>{value}</p>
+    <Link href={href} className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <CardHeader icon={icon} title={title} />
+      <p className={`text-3xl font-semibold ${valueClassName ?? 'text-zinc-100'}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-500">{sub}</p>}
       {breakdown && (
         <div className="mt-3 space-y-1 border-t border-white/5 pt-3">
@@ -131,9 +139,8 @@ function SplitStatCard({
   rightLabel: string;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
-      <IconBadge icon={icon} />
-      <p className="mb-3 text-xs font-medium text-zinc-400">{title}</p>
+    <Link href={href} className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <CardHeader icon={icon} title={title} />
       <div className="flex items-end justify-between gap-4">
         <div>
           <p className="text-xl font-semibold text-zinc-100">{left}</p>
@@ -168,9 +175,8 @@ function ValueStatCard({
   rightPending: number;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
-      <IconBadge icon="value" />
-      <p className="mb-3 text-xs font-medium text-zinc-400">{title}</p>
+    <Link href={href} className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <CardHeader icon="value" title={title} />
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xl font-semibold text-zinc-100">{money(leftCompleted)}</p>
@@ -201,9 +207,8 @@ function CommissionStatCard({
   netPending: number;
 }) {
   return (
-    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-blue-500/30">
-      <IconBadge icon="commission" />
-      <p className="mb-3 text-xs font-medium text-zinc-400">Total Commission</p>
+    <Link href={href} className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <CardHeader icon="commission" title="Total Commission" />
       <div className="grid grid-cols-2 gap-x-4 gap-y-3">
         <div>
           <p className="text-xl font-semibold text-zinc-100">{money(grossCompleted)}</p>
