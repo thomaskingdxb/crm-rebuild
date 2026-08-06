@@ -123,6 +123,10 @@ export interface DealStats {
   rentalsNetPending: number;
   commissionGrossPending: number;
   commissionNetPending: number;
+  salesValueCompleted: number;
+  rentalsValueCompleted: number;
+  salesValuePending: number;
+  rentalsValuePending: number;
 }
 
 export function computeDealStats(deals: DealWithRelations[]): DealStats {
@@ -143,11 +147,16 @@ export function computeDealStats(deals: DealWithRelations[]): DealStats {
     rentalsNetPending: 0,
     commissionGrossPending: 0,
     commissionNetPending: 0,
+    salesValueCompleted: 0,
+    rentalsValueCompleted: 0,
+    salesValuePending: 0,
+    rentalsValuePending: 0,
   };
 
   for (const d of deals) {
     const gross = grossCommission(d) ?? 0;
     const net = netCommission(d) ?? 0;
+    const value = d.value ?? 0;
     const category = dealCategory(d);
     const isCompleted = d.deal_stages?.name === 'Completed';
 
@@ -158,10 +167,12 @@ export function computeDealStats(deals: DealWithRelations[]): DealStats {
         stats.salesCompleted += 1;
         stats.salesGrossComms += gross;
         stats.salesNetComms += net;
+        stats.salesValueCompleted += value;
       } else if (category === 'rental') {
         stats.rentalsCompleted += 1;
         stats.rentalsGrossComms += gross;
         stats.rentalsNetComms += net;
+        stats.rentalsValueCompleted += value;
       }
     } else {
       stats.commissionGrossPending += gross;
@@ -170,10 +181,12 @@ export function computeDealStats(deals: DealWithRelations[]): DealStats {
         stats.salesPending += 1;
         stats.salesGrossPending += gross;
         stats.salesNetPending += net;
+        stats.salesValuePending += value;
       } else if (category === 'rental') {
         stats.rentalsPending += 1;
         stats.rentalsGrossPending += gross;
         stats.rentalsNetPending += net;
+        stats.rentalsValuePending += value;
       }
     }
   }

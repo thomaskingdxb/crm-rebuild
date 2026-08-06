@@ -55,6 +55,15 @@ export default function DealStatsCards({ stats }: { stats: DealStats }) {
         pendingRight={`${stats.rentalsPending}`}
       />
       <StatCard
+        title="Deal Value"
+        left={money(stats.salesValueCompleted)}
+        leftLabel="Sales"
+        right={money(stats.rentalsValueCompleted)}
+        rightLabel="Rentals"
+        pendingLeft={money(stats.salesValuePending)}
+        pendingRight={money(stats.rentalsValuePending)}
+      />
+      <StatCard
         title="Completed Gross Comms"
         left={money(stats.salesGrossComms)}
         leftLabel="Sales"
