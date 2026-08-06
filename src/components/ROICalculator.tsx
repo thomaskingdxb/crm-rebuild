@@ -264,40 +264,38 @@ export default function ROICalculator({
       const centerX = pageW / 2;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
-      y += 7;
+      y += 8;
+
+      const footerRow1 = y;
+      const footerRow2 = y + 5;
+      const footerRow3 = y + 10;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(...goldBright);
-      pdf.text('Thomas King', marginX, y);
-      y += 4.5;
+      pdf.text('Thomas King', marginX, footerRow1);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
       pdf.setTextColor(...textFaint);
-      pdf.text('SALES ADVISOR', marginX, y);
-      y += 6;
+      pdf.text('SALES ADVISOR', marginX, footerRow2);
 
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
-      pdf.text('+971 50 167 0251', marginX, y);
-      y += 5;
-      pdf.text('Thomas.king@luxuryinvestgroup.com', marginX, y);
-      y += 5;
-      pdf.text('luxuryinvestgroup.com', marginX, y);
-      y += 8;
+      pdf.text('+971 50 167 0251', centerX, footerRow1, { align: 'center' });
+      pdf.text('Thomas.king@luxuryinvestgroup.com', centerX, footerRow2, { align: 'center' });
+      pdf.text('luxuryinvestgroup.com', centerX, footerRow3, { align: 'center' });
 
       pdf.setFontSize(8.5);
       pdf.setTextColor(...gold);
-      pdf.text('Instagram', marginX, y);
+      pdf.text('Instagram', pageW - marginX - 20, footerRow1, { align: 'right' });
       pdf.setTextColor(...textMuted);
-      pdf.text('@t.king.lux', marginX + 18, y);
-      y += 5;
+      pdf.text('@t.king.lux', pageW - marginX, footerRow1, { align: 'right' });
       pdf.setTextColor(...gold);
-      pdf.text('TikTok', marginX, y);
+      pdf.text('TikTok', pageW - marginX - 20, footerRow2, { align: 'right' });
       pdf.setTextColor(...textMuted);
-      pdf.text('@t.king.lux', marginX + 18, y);
-      y += 10;
+      pdf.text('@t.king.lux', pageW - marginX, footerRow2, { align: 'right' });
 
+      y = footerRow3 + 9;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
       y += 5;
