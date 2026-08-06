@@ -43,6 +43,13 @@ export async function getClients(): Promise<ClientListItem[]> {
   }));
 }
 
+export async function getFollowUpClients(): Promise<ClientListItem[]> {
+  const clients = await getClients();
+  return clients
+    .filter((c) => c.follow_up_date)
+    .sort((a, b) => (a.follow_up_date! < b.follow_up_date! ? -1 : a.follow_up_date! > b.follow_up_date! ? 1 : 0));
+}
+
 export async function getClient(id: string): Promise<ClientListItem | null> {
   const [clientRes, activitiesRes] = await Promise.all([
     supabase.from('clients').select(CLIENT_SELECT).eq('id', id).single(),

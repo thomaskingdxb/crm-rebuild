@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ClientListItem, Lookup } from '@/types/database';
-import { daysSince } from '@/lib/date';
+import { daysSince, formatDate } from '@/lib/date';
 import { telHref, whatsappHref } from '@/lib/phone';
 import LogActivityButton from '@/components/LogActivityButton';
 
@@ -15,6 +15,15 @@ function activityChip(days: number | null): { text: string; className: string } 
   if (days <= 7) return { text: `${days}`, className: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20' };
   if (days <= 30) return { text: `${days}`, className: 'bg-amber-500/10 text-amber-400 ring-amber-500/20' };
   return { text: `${days}`, className: 'bg-rose-500/10 text-rose-400 ring-rose-500/20' };
+}
+
+function followUpClass(followUp: string | null): string {
+  if (!followUp) return 'text-zinc-500';
+  const days = daysSince(followUp);
+  if (days === null) return 'text-zinc-500';
+  if (days > 0) return 'text-rose-400';
+  if (days === 0) return 'text-amber-400';
+  return 'text-zinc-400';
 }
 
 export default function ClientCard({ client, activityTypes }: { client: ClientListItem; activityTypes: Lookup[] }) {
@@ -90,8 +99,15 @@ export default function ClientCard({ client, activityTypes }: { client: ClientLi
         </div>
       </div>
 
-      {client.notes && (
-        <p className="truncate border-t border-white/5 pt-3 text-xs text-zinc-500">{client.notes}</p>
+      {(client.follow_up_date || client.notes) && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-white/5 pt-3">
+          {client.follow_up_date && (
+            <span className={`shrink-0 text-xs font-medium ${followUpClass(client.follow_up_date)}`}>
+              Follow up: {formatDate(client.follow_up_date)}
+            </span>
+          )}
+          {client.notes && <p className="truncate text-xs text-zinc-500">{client.notes}</p>}
+        </div>
       )}
     </div>
   );

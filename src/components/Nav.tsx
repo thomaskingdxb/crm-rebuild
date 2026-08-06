@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { label: 'Properties', href: '/properties', available: true },
   { label: 'Enquiries', href: '/enquiries', available: true },
   { label: 'Pipeline', href: '/pipeline', available: true },
+  { label: 'Follow Ups', href: '/follow-ups', available: true },
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
 ];
