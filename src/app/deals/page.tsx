@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { getDeals, getDealLookups } from '@/lib/deals';
-import DealsList from '@/components/DealsList';
+import { getDeals, getDealLookups, computeDealStats } from '@/lib/deals';
+import DealsKanban from '@/components/DealsKanban';
+import DealStatsCards from '@/components/DealStatsCards';
 
 export default async function DealsPage() {
   const [deals, lookups] = await Promise.all([getDeals(), getDealLookups()]);
+  const stats = computeDealStats(deals);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -21,7 +23,9 @@ export default async function DealsPage() {
           </Link>
         </div>
 
-        <DealsList deals={deals} lookups={lookups} />
+        <DealStatsCards stats={stats} />
+
+        <DealsKanban deals={deals} dealTypes={lookups.dealTypes} saleStages={lookups.saleStages} rentalStages={lookups.rentalStages} />
       </div>
     </div>
   );

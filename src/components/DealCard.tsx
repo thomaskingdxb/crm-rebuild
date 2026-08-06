@@ -1,17 +1,11 @@
 import Link from 'next/link';
 import type { DealWithRelations } from '@/types/database';
 import { formatDate } from '@/lib/date';
-
-const STAGE_STYLES: Record<string, string> = {
-  'Closed - Won': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
-  'Closed - Lost': 'bg-white/5 text-zinc-400 ring-white/10',
-  'Deal agreed': 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
-  Negotiating: 'bg-amber-500/10 text-amber-400 ring-amber-500/20',
-  Unresponsive: 'bg-rose-500/10 text-rose-400 ring-rose-500/20',
-};
+import { grossCommission, netCommission } from '@/lib/deals';
 
 export default function DealCard({ deal, role }: { deal: DealWithRelations; role?: string }) {
-  const stages = deal.deal_lead_stages.map((s) => s.lead_stages.name);
+  const gross = grossCommission(deal);
+  const net = netCommission(deal);
 
   return (
     <Link
@@ -36,16 +30,18 @@ export default function DealCard({ deal, role }: { deal: DealWithRelations; role
               {deal.deal_types.name}
             </span>
           )}
-          {stages.map((s) => (
-            <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STAGE_STYLES[s] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
-              {s}
+          {deal.deal_stages && (
+            <span className="inline-flex items-center rounded-full bg-white/5 px-2 py-0.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10">
+              {deal.deal_stages.name}
             </span>
-          ))}
+          )}
         </div>
       </div>
 
       <div className="shrink-0 text-right text-sm">
         {deal.value && <p className="font-bold text-white">AED {deal.value.toLocaleString()}</p>}
+        {gross !== null && <p className="text-xs text-zinc-500">Gross AED {gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>}
+        {net !== null && <p className="text-xs text-zinc-600">Net AED {net.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>}
         {deal.date_agreed && <p className="text-xs text-zinc-500">Agreed {formatDate(deal.date_agreed)}</p>}
       </div>
     </Link>

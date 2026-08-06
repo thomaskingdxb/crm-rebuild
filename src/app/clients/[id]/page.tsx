@@ -9,6 +9,7 @@ import { updateClientAction, deleteClientAction } from '@/app/clients/actions';
 import { daysSince } from '@/lib/date';
 import { telHref, whatsappHref } from '@/lib/phone';
 import DeleteClientButton from '@/components/DeleteClientButton';
+import BackLink from '@/components/BackLink';
 import PropertyCard from '@/components/PropertyCard';
 import TaskCard from '@/components/TaskCard';
 import AddTaskButton from '@/components/AddTaskButton';
@@ -50,9 +51,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <div className="px-6 py-8">
-        <Link href="/clients" className="text-sm text-zinc-500 hover:text-zinc-300">
-          ← Back to Clients
-        </Link>
+        <BackLink href="/clients" label="← Back to Clients" />
 
         <div className="mt-3 flex items-start justify-between">
           <div>

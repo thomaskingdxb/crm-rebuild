@@ -11,13 +11,9 @@ function num(v: FormDataEntryValue | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-async function syncLeadStages(dealId: string, stageIds: number[]) {
-  const { error: delErr } = await supabase.from('deal_lead_stages').delete().eq('deal_id', dealId);
-  if (delErr) throw delErr;
-  if (stageIds.length > 0) {
-    const { error } = await supabase.from('deal_lead_stages').insert(stageIds.map((lead_stage_id) => ({ deal_id: dealId, lead_stage_id })));
-    if (error) throw error;
-  }
+function pct(v: FormDataEntryValue | null): number | null {
+  const n = num(v);
+  return n === null ? null : n / 100;
 }
 
 function readDealForm(formData: FormData) {
@@ -26,9 +22,12 @@ function readDealForm(formData: FormData) {
     owner_id: (formData.get('owner_id') as string) || null,
     buyer_id: (formData.get('buyer_id') as string) || null,
     deal_type_id: num(formData.get('deal_type_id')),
+    deal_stage_id: num(formData.get('deal_stage_id')),
     value: num(formData.get('value')),
-    commission_percent: num(formData.get('commission_percent')),
+    commission_percent: pct(formData.get('commission_percent')),
     commission_amount: num(formData.get('commission_amount')),
+    commission_split_percent: pct(formData.get('commission_split_percent')),
+    commission_split_amount: num(formData.get('commission_split_amount')),
     notes: (formData.get('notes') as string) || null,
     date_agreed: (formData.get('date_agreed') as string) || null,
     date_completed: (formData.get('date_completed') as string) || null,
@@ -38,12 +37,9 @@ function readDealForm(formData: FormData) {
 export async function createDealAction(formData: FormData) {
   const id = await generateNextDealId();
   const fields = readDealForm(formData);
-  const stageIds = formData.getAll('lead_stage_ids').map(Number);
 
   const { error } = await supabase.from('deals').insert({ id, ...fields });
   if (error) throw error;
-
-  await syncLeadStages(id, stageIds);
 
   revalidatePath('/deals');
   redirect(`/deals/${id}`);
@@ -51,12 +47,9 @@ export async function createDealAction(formData: FormData) {
 
 export async function updateDealAction(id: string, formData: FormData) {
   const fields = readDealForm(formData);
-  const stageIds = formData.getAll('lead_stage_ids').map(Number);
 
   const { error } = await supabase.from('deals').update(fields).eq('id', id);
   if (error) throw error;
-
-  await syncLeadStages(id, stageIds);
 
   revalidatePath(`/deals/${id}`);
   revalidatePath('/deals');

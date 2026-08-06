@@ -116,15 +116,25 @@ export interface PropertyWithRelations extends Property {
   clients: { id: string; name: string } | null;
 }
 
+export interface DealStage {
+  id: number;
+  name: string;
+  category: 'sale' | 'rental';
+  display_order: number | null;
+}
+
 export interface Deal {
   id: string; // e.g. 'D001'
   property_id: string | null;
   owner_id: string | null;
   buyer_id: string | null;
   deal_type_id: number | null;
+  deal_stage_id: number | null;
   value: number | null;
   commission_percent: number | null;
   commission_amount: number | null;
+  commission_split_percent: number | null;
+  commission_split_amount: number | null;
   notes: string | null;
   date_agreed: string | null;
   date_completed: string | null;
@@ -132,7 +142,7 @@ export interface Deal {
 
 export interface DealWithRelations extends Deal {
   deal_types: Lookup | null;
-  deal_lead_stages: { lead_stages: Lookup }[];
+  deal_stages: DealStage | null;
   properties: { id: string; building: string | null; unit_number: string | null } | null;
   owner: { id: string; name: string } | null;
   buyer: { id: string; name: string } | null;

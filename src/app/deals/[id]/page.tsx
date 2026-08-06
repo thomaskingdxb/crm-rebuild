@@ -6,25 +6,13 @@ import { getPropertiesBasic } from '@/lib/properties';
 import { updateDealAction, deleteDealAction } from '@/app/deals/actions';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteButton from '@/components/DeleteButton';
+import DealTypeStageFields from '@/components/DealTypeStageFields';
+import CommissionSplitInput from '@/components/CommissionSplitInput';
+import BackLink from '@/components/BackLink';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
-const pillSpanClass =
-  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40';
-
-function PillGroup({ name, options, selectedIds }: { name: string; options: { id: number; name: string }[]; selectedIds: Set<number> }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <label key={o.id} className="cursor-pointer">
-          <input type="checkbox" name={name} value={o.id} defaultChecked={selectedIds.has(o.id)} className="peer sr-only" />
-          <span className={pillSpanClass}>{o.name}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,14 +27,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
   const updateWithId = updateDealAction.bind(null, id);
   const deleteWithId = deleteDealAction.bind(null, id);
-  const selectedStageIds = new Set(deal.deal_lead_stages.map((s) => s.lead_stages.id));
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <div className="px-6 py-8">
-        <Link href="/deals" className="text-sm text-zinc-500 hover:text-zinc-300">
-          ← Back to Deals
-        </Link>
+        <BackLink href="/deals" label="← Back to Deals" />
 
         <div className="mt-3 flex items-start justify-between">
           <div>
@@ -113,36 +98,36 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             />
           </div>
 
-          <div>
-            <label className={labelClass}>Deal type</label>
-            <select name="deal_type_id" defaultValue={deal.deal_type_id ?? ''} className={inputClass}>
-              <option value="">—</option>
-              {lookups.dealTypes.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <span className={labelClass}>Lead stage</span>
-            <PillGroup name="lead_stage_ids" options={lookups.leadStages} selectedIds={selectedStageIds} />
-          </div>
+          <DealTypeStageFields
+            dealTypes={lookups.dealTypes}
+            saleStages={lookups.saleStages}
+            rentalStages={lookups.rentalStages}
+            defaultDealTypeId={deal.deal_type_id}
+            defaultDealStageId={deal.deal_stage_id}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Value</label>
               <input name="value" type="number" step="any" defaultValue={deal.value ?? ''} className={inputClass} />
             </div>
-            <div>
-              <label className={labelClass}>Commission %</label>
-              <input name="commission_percent" type="number" step="any" defaultValue={deal.commission_percent ?? ''} className={inputClass} />
-            </div>
+            <CommissionSplitInput
+              label="Commission (gross)"
+              percentName="commission_percent"
+              amountName="commission_amount"
+              defaultPercent={deal.commission_percent != null ? deal.commission_percent * 100 : null}
+              defaultAmount={deal.commission_amount}
+            />
           </div>
 
-          <div>
-            <label className={labelClass}>Commission amount</label>
-            <input name="commission_amount" type="number" step="any" defaultValue={deal.commission_amount ?? ''} className={inputClass} />
-          </div>
+          <CommissionSplitInput
+            label="Your split (net)"
+            percentName="commission_split_percent"
+            amountName="commission_split_amount"
+            defaultPercent={deal.commission_split_percent != null ? deal.commission_split_percent * 100 : null}
+            defaultAmount={deal.commission_split_amount}
+            percentPlaceholder="e.g. 60 for 60% of gross"
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <div>

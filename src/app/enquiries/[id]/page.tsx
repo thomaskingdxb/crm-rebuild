@@ -12,6 +12,7 @@ import LogActivityButton from '@/components/LogActivityButton';
 import ActivityListItem from '@/components/ActivityListItem';
 import TaskCard from '@/components/TaskCard';
 import AddTaskButton from '@/components/AddTaskButton';
+import BackLink from '@/components/BackLink';
 
 const sectionCardClass = 'rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5';
 
@@ -70,9 +71,7 @@ export default async function EnquiryDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <div className="px-6 py-8">
-        <Link href="/enquiries" className="text-sm text-zinc-500 hover:text-zinc-300">
-          ← Back to Enquiries
-        </Link>
+        <BackLink href="/enquiries" label="← Back to Enquiries" />
 
         <div className="mt-3 flex items-start justify-between">
           <div>

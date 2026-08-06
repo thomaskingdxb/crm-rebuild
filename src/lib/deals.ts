@@ -1,9 +1,9 @@
 import { supabase } from '@/lib/supabase/client';
-import type { DealWithRelations, DealForClient, Lookup } from '@/types/database';
+import type { DealWithRelations, DealForClient, DealStage, Lookup } from '@/types/database';
 
 const DEAL_SELECT = `*,
   deal_types ( id, name, display_order ),
-  deal_lead_stages ( lead_stages ( id, name, display_order ) ),
+  deal_stages ( id, name, category, display_order ),
   properties ( id, building, unit_number ),
   owner:clients!owner_id ( id, name ),
   buyer:clients!buyer_id ( id, name )`;
@@ -51,17 +51,21 @@ export async function getPropertyDeals(propertyId: string): Promise<DealWithRela
 }
 
 export async function getDealLookups() {
-  const [dealTypes, leadStages] = await Promise.all([
+  const [dealTypes, dealStages] = await Promise.all([
     supabase.from('deal_types').select('*').order('display_order'),
-    supabase.from('lead_stages').select('*').order('display_order'),
+    supabase.from('deal_stages').select('*').order('display_order'),
   ]);
 
   if (dealTypes.error) throw dealTypes.error;
-  if (leadStages.error) throw leadStages.error;
+  if (dealStages.error) throw dealStages.error;
+
+  const stages = dealStages.data as DealStage[];
 
   return {
     dealTypes: dealTypes.data as Lookup[],
-    leadStages: leadStages.data as Lookup[],
+    dealStages: stages,
+    saleStages: stages.filter((s) => s.category === 'sale'),
+    rentalStages: stages.filter((s) => s.category === 'rental'),
   };
 }
 
@@ -75,4 +79,74 @@ export async function generateNextDealId(): Promise<string> {
     if (!isNaN(n) && n > max) max = n;
   }
   return `D${String(max + 1).padStart(3, '0')}`;
+}
+
+// deal_type_id 1 = Rental; 2-4 (Secondary-ready, Secondary-offplan, Offplan) are all Sale variants.
+export function dealCategory(deal: { deal_type_id: number | null }): 'sale' | 'rental' | null {
+  if (deal.deal_type_id == null) return null;
+  return deal.deal_type_id === 1 ? 'rental' : 'sale';
+}
+
+export function grossCommission(deal: { value: number | null; commission_percent: number | null; commission_amount: number | null }): number | null {
+  if (deal.commission_amount != null) return deal.commission_amount;
+  if (deal.value != null && deal.commission_percent != null) return deal.value * deal.commission_percent;
+  return null;
+}
+
+export function netCommission(deal: {
+  value: number | null;
+  commission_percent: number | null;
+  commission_amount: number | null;
+  commission_split_percent: number | null;
+  commission_split_amount: number | null;
+}): number | null {
+  if (deal.commission_split_amount != null) return deal.commission_split_amount;
+  const gross = grossCommission(deal);
+  if (gross != null && deal.commission_split_percent != null) return gross * deal.commission_split_percent;
+  return null;
+}
+
+export interface DealStats {
+  salesCompleted: number;
+  rentalsCompleted: number;
+  salesGrossComms: number;
+  rentalsGrossComms: number;
+  salesNetComms: number;
+  rentalsNetComms: number;
+  commissionGross: number;
+  commissionNet: number;
+}
+
+export function computeDealStats(deals: DealWithRelations[]): DealStats {
+  const stats: DealStats = {
+    salesCompleted: 0,
+    rentalsCompleted: 0,
+    salesGrossComms: 0,
+    rentalsGrossComms: 0,
+    salesNetComms: 0,
+    rentalsNetComms: 0,
+    commissionGross: 0,
+    commissionNet: 0,
+  };
+
+  for (const d of deals) {
+    const gross = grossCommission(d) ?? 0;
+    const net = netCommission(d) ?? 0;
+    stats.commissionGross += gross;
+    stats.commissionNet += net;
+
+    if (d.deal_stages?.name !== 'Completed') continue;
+    const category = dealCategory(d);
+    if (category === 'sale') {
+      stats.salesCompleted += 1;
+      stats.salesGrossComms += gross;
+      stats.salesNetComms += net;
+    } else if (category === 'rental') {
+      stats.rentalsCompleted += 1;
+      stats.rentalsGrossComms += gross;
+      stats.rentalsNetComms += net;
+    }
+  }
+
+  return stats;
 }

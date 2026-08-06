@@ -10,6 +10,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import EnquiryCard from '@/components/EnquiryCard';
 import DealCard from '@/components/DealCard';
+import BackLink from '@/components/BackLink';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -58,9 +59,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <div className="px-6 py-8">
-        <Link href="/properties" className="text-sm text-zinc-500 hover:text-zinc-300">
-          ← Back to Properties
-        </Link>
+        <BackLink href="/properties" label="← Back to Properties" />
 
         <div className="mt-3 flex items-start justify-between">
           <div>
