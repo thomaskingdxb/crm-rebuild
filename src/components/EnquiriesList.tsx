@@ -43,10 +43,10 @@ function FilterGroup({ title, options, selected, onToggle }: { title: string; op
 export default function EnquiriesList({ enquiries, lookups }: { enquiries: EnquiryListItem[]; lookups: EnquiryLookups }) {
   const [query, setQuery] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  function toggleCollapsed(key: string) {
-    setCollapsed((prev) => {
+  function toggleExpanded(key: string) {
+    setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -244,39 +244,39 @@ export default function EnquiriesList({ enquiries, lookups }: { enquiries: Enqui
         <div className="flex flex-col gap-8">
           {groups.map((g) => {
             const typeKey = `type:${g.type}`;
-            const typeCollapsed = collapsed.has(typeKey);
+            const typeExpanded = expanded.has(typeKey);
             const typeCount = g.stages.reduce((sum, s) => sum + s.enquiries.length, 0);
 
             return (
               <div key={g.type} className="surface-card">
                 <button
                   type="button"
-                  onClick={() => toggleCollapsed(typeKey)}
+                  onClick={() => toggleExpanded(typeKey)}
                   className="flex w-full items-center gap-2 rounded-2xl px-5 py-4 text-left transition hover:bg-white/[0.03]"
                 >
-                  <span className={`text-xs text-zinc-500 transition-transform ${typeCollapsed ? '' : 'rotate-90'}`}>▸</span>
+                  <span className={`text-xs text-zinc-500 transition-transform ${typeExpanded ? 'rotate-90' : ''}`}>▸</span>
                   <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-200">{g.type}</h2>
                   <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-white/10">{typeCount}</span>
                 </button>
 
-                {!typeCollapsed && (
+                {typeExpanded && (
                   <div className="flex flex-col gap-4 px-5 pb-5">
                     {g.stages.map((s) => {
                       const stageKey = `stage:${g.type}::${s.stage}`;
-                      const stageCollapsed = collapsed.has(stageKey);
+                      const stageExpanded = expanded.has(stageKey);
 
                       return (
                         <div key={s.stage} className="rounded-xl bg-white/[0.03] ring-1 ring-white/5">
                           <button
                             type="button"
-                            onClick={() => toggleCollapsed(stageKey)}
+                            onClick={() => toggleExpanded(stageKey)}
                             className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left transition hover:bg-white/[0.03]"
                           >
-                            <span className={`text-[10px] text-zinc-500 transition-transform ${stageCollapsed ? '' : 'rotate-90'}`}>▸</span>
+                            <span className={`text-[10px] text-zinc-500 transition-transform ${stageExpanded ? 'rotate-90' : ''}`}>▸</span>
                             <h3 className="text-xs font-medium text-zinc-300">{s.stage}</h3>
                             <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] font-medium text-zinc-500 ring-1 ring-inset ring-white/10">{s.enquiries.length}</span>
                           </button>
-                          {!stageCollapsed && (
+                          {stageExpanded && (
                             <div className="flex flex-col gap-4 px-4 pb-4">
                               {s.enquiries.map((e) => (
                                 <EnquiryCard key={e.id} enquiry={e} />
