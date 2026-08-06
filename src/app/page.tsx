@@ -17,18 +17,30 @@ function StatCard({
   value,
   valueClassName,
   sub,
+  breakdown,
 }: {
   href: string;
   title: string;
   value: string;
   valueClassName?: string;
   sub?: string;
+  breakdown?: { name: string; count: number }[];
 }) {
   return (
     <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
       <p className="text-xs font-medium text-zinc-400">{title}</p>
       <p className={`mt-1 text-3xl font-semibold ${valueClassName ?? 'text-zinc-100'}`}>{value}</p>
       {sub && <p className="mt-1 text-xs text-zinc-500">{sub}</p>}
+      {breakdown && (
+        <div className="mt-3 space-y-1 border-t border-white/5 pt-3">
+          {breakdown.map((s) => (
+            <div key={s.name} className="flex items-center justify-between text-xs">
+              <span className={STATUS_COLORS[s.name] ?? 'text-zinc-400'}>{s.name}</span>
+              <span className="font-medium text-zinc-300">{s.count}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </Link>
   );
 }
@@ -65,6 +77,82 @@ function SplitStatCard({
   );
 }
 
+function ValueStatCard({
+  href,
+  title,
+  leftLabel,
+  leftCompleted,
+  leftPending,
+  rightLabel,
+  rightCompleted,
+  rightPending,
+}: {
+  href: string;
+  title: string;
+  leftLabel: string;
+  leftCompleted: number;
+  leftPending: number;
+  rightLabel: string;
+  rightCompleted: number;
+  rightPending: number;
+}) {
+  return (
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+      <p className="mb-3 text-xs font-medium text-zinc-400">{title}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xl font-semibold text-zinc-100">{money(leftCompleted)}</p>
+          <p className="text-[10px] text-zinc-500">{leftLabel} completed</p>
+          <p className="mt-1 text-xs text-zinc-500">{money(leftPending)} pending</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl font-semibold text-zinc-100">{money(rightCompleted)}</p>
+          <p className="text-[10px] text-zinc-500">{rightLabel} completed</p>
+          <p className="mt-1 text-xs text-zinc-500">{money(rightPending)} pending</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function CommissionStatCard({
+  href,
+  grossCompleted,
+  netCompleted,
+  grossPending,
+  netPending,
+}: {
+  href: string;
+  grossCompleted: number;
+  netCompleted: number;
+  grossPending: number;
+  netPending: number;
+}) {
+  return (
+    <Link href={href} className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
+      <p className="mb-3 text-xs font-medium text-zinc-400">Total Commission</p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <div>
+          <p className="text-xl font-semibold text-zinc-100">{money(grossCompleted)}</p>
+          <p className="text-[10px] text-zinc-500">Gross completed</p>
+        </div>
+        <div>
+          <p className="text-xl font-semibold text-zinc-100">{money(netCompleted)}</p>
+          <p className="text-[10px] text-zinc-500">Net completed</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-zinc-400">{money(grossPending)}</p>
+          <p className="text-[10px] text-zinc-500">Gross pending</p>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-zinc-400">{money(netPending)}</p>
+          <p className="text-[10px] text-zinc-500">Net pending</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
 
@@ -75,7 +163,7 @@ export default async function DashboardPage() {
         <p className="mb-6 text-sm text-zinc-500">Overview across clients, pipeline, deals, and tasks.</p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard href="/clients" title="Total Clients" value={`${stats.totalClients}`} />
+          <StatCard href="/clients" title="Total Clients" value={`${stats.totalClients}`} breakdown={stats.statusCounts} />
           <StatCard href="/properties" title="Total Properties" value={`${stats.totalProperties}`} />
           <StatCard href="/pipeline" title="Active Enquiries" value={`${stats.activeEnquiries}`} valueClassName="text-blue-400" />
           <SplitStatCard
@@ -94,33 +182,23 @@ export default async function DashboardPage() {
             right={`${stats.tasksDueToday}`}
             rightLabel="Due Today"
           />
-          <SplitStatCard
+          <ValueStatCard
             href="/deals"
-            title="Deals Completed"
-            left={`${stats.dealStats.salesCompleted}`}
+            title="Sales & Rental Value"
             leftLabel="Sales"
-            right={`${stats.dealStats.rentalsCompleted}`}
+            leftCompleted={stats.dealStats.salesValueCompleted}
+            leftPending={stats.dealStats.salesValuePending}
             rightLabel="Rentals"
+            rightCompleted={stats.dealStats.rentalsValueCompleted}
+            rightPending={stats.dealStats.rentalsValuePending}
           />
-          <SplitStatCard
+          <CommissionStatCard
             href="/deals"
-            title="Total Commission (Completed)"
-            left={money(stats.dealStats.commissionGross)}
-            leftLabel="Gross"
-            right={money(stats.dealStats.commissionNet)}
-            rightLabel="Net"
+            grossCompleted={stats.dealStats.commissionGross}
+            netCompleted={stats.dealStats.commissionNet}
+            grossPending={stats.dealStats.commissionGrossPending}
+            netPending={stats.dealStats.commissionNetPending}
           />
-          <Link href="/deals" className="surface-card p-5 transition hover:ring-1 hover:ring-white/20">
-            <p className="mb-2 text-xs font-medium text-zinc-400">By Status</p>
-            <div className="space-y-1">
-              {stats.statusCounts.map((s) => (
-                <div key={s.name} className="flex items-center justify-between text-sm">
-                  <span className={STATUS_COLORS[s.name] ?? 'text-zinc-300'}>{s.name}</span>
-                  <span className="font-medium text-zinc-200">{s.count}</span>
-                </div>
-              ))}
-            </div>
-          </Link>
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">

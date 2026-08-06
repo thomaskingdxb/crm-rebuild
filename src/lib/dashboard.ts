@@ -43,9 +43,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     statusCountMap.set(name, (statusCountMap.get(name) ?? 0) + 1);
   }
 
+  const inactiveLeadStageNames = [...CLOSED_LEAD_STAGE_NAMES, 'Future prospect'];
   const activeEnquiries = enquiries.filter((e) => {
     const stageName = e.enquiry_lead_stages[0]?.lead_stages.name;
-    return !stageName || !CLOSED_LEAD_STAGE_NAMES.includes(stageName);
+    return !stageName || !inactiveLeadStageNames.includes(stageName);
   }).length;
 
   const tasksDueToday = tasks.filter((t) => t.deadline_date === today).length;
