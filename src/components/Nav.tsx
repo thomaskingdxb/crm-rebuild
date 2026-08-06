@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { label: 'Clients', href: '/clients', available: true },
   { label: 'Properties', href: '/properties', available: true },
   { label: 'Enquiries', href: '/enquiries', available: true },
+  { label: 'Pipeline', href: '/pipeline', available: true },
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
 ];

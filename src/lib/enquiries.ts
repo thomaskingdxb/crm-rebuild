@@ -107,6 +107,10 @@ export async function getEnquiryLookups() {
   };
 }
 
+// Enquiries in these lead stages are done deals or dead leads — the Pipeline
+// board excludes them to stay focused on enquiries still being worked.
+export const CLOSED_LEAD_STAGE_NAMES = ['Closed - Lost', 'Closed - Won', 'Unresponsive'];
+
 export async function generateNextEnquiryId(): Promise<string> {
   const { data, error } = await supabase.from('enquiries').select('id');
   if (error) throw error;
