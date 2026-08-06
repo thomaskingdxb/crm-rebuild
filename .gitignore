@@ -36,6 +36,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# source client data (contains real PII, not for version control)
+/Client Database/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
