@@ -13,6 +13,7 @@ import TaskCard from '@/components/TaskCard';
 import AddTaskButton from '@/components/AddTaskButton';
 import LogActivityButton from '@/components/LogActivityButton';
 import ActivityListItem from '@/components/ActivityListItem';
+import ConfirmButton from '@/components/ConfirmButton';
 import { updateEnquiryModalAction, deleteEnquiryModalAction } from '@/app/enquiries/actions';
 
 const inputClass =
@@ -102,7 +103,6 @@ export default function EnquiryDetailModal({
   }
 
   function handleDelete() {
-    if (!confirm('Delete this enquiry? This cannot be undone.')) return;
     startTransition(async () => {
       await deleteEnquiryModalAction(enquiry.id);
       onClose();
@@ -241,14 +241,14 @@ export default function EnquiryDetailModal({
           <button type="submit" disabled={pending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">
             {pending ? 'Saving...' : 'Save Changes'}
           </button>
-          <button
-            type="button"
-            onClick={handleDelete}
+          <ConfirmButton
+            label="Delete Enquiry"
+            message="Delete this enquiry?"
+            confirmLabel="Delete"
             disabled={pending}
+            onConfirm={handleDelete}
             className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20 disabled:opacity-50"
-          >
-            Delete Enquiry
-          </button>
+          />
         </div>
       </form>
 

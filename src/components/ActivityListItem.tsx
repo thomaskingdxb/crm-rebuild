@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/Modal';
+import ConfirmButton from '@/components/ConfirmButton';
 import { updateActivityModalAction, deleteActivityModalAction } from '@/app/clients/actions';
 import { formatDate } from '@/lib/date';
 import type { ActivityWithRelations, Lookup } from '@/types/database';
@@ -35,7 +36,6 @@ export default function ActivityListItem({
   }
 
   function handleDelete() {
-    if (!confirm('Delete this activity? This cannot be undone.')) return;
     startTransition(async () => {
       await deleteActivityModalAction(clientId, activity.id);
       setOpen(false);
@@ -83,14 +83,14 @@ export default function ActivityListItem({
             <button type="submit" disabled={pending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">
               {pending ? 'Saving...' : 'Save Changes'}
             </button>
-            <button
-              type="button"
-              onClick={handleDelete}
+            <ConfirmButton
+              label="Delete Activity"
+              message="Delete this activity?"
+              confirmLabel="Delete"
               disabled={pending}
+              onConfirm={handleDelete}
               className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20 disabled:opacity-50"
-            >
-              Delete Activity
-            </button>
+            />
           </div>
         </form>
       </Modal>

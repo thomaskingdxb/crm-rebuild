@@ -6,6 +6,7 @@ import type { TaskWithRelations, Lookup } from '@/types/database';
 import { formatDate, daysSince } from '@/lib/date';
 import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
+import ConfirmButton from '@/components/ConfirmButton';
 import { updateTaskModalAction, deleteTaskModalAction } from '@/app/tasks/actions';
 
 const inputClass =
@@ -45,7 +46,6 @@ export default function TaskCard({
   }
 
   function handleDelete() {
-    if (!confirm('Delete this task? This cannot be undone.')) return;
     startTransition(async () => {
       await deleteTaskModalAction(task.id, task.client_id);
       setOpen(false);
@@ -141,14 +141,14 @@ export default function TaskCard({
             <button type="submit" disabled={pending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">
               {pending ? 'Saving...' : 'Save Changes'}
             </button>
-            <button
-              type="button"
-              onClick={handleDelete}
+            <ConfirmButton
+              label="Delete Task"
+              message="Delete this task?"
+              confirmLabel="Delete"
               disabled={pending}
+              onConfirm={handleDelete}
               className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20 disabled:opacity-50"
-            >
-              Delete Task
-            </button>
+            />
           </div>
         </form>
       </Modal>
