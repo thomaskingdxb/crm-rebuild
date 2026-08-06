@@ -1,6 +1,9 @@
-import Link from 'next/link';
-import type { EnquiryListItem } from '@/types/database';
+'use client';
+
+import { useState } from 'react';
+import type { EnquiryListItem, Lookup } from '@/types/database';
 import { formatDate, daysSince } from '@/lib/date';
+import EnquiryDetailModal from '@/components/EnquiryDetailModal';
 
 const TYPE_STYLES: Record<string, string> = {
   Sale: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
@@ -23,35 +26,76 @@ function followUpClass(followUp: string | null): string {
   return 'text-zinc-400';
 }
 
-export default function PipelineCard({ enquiry }: { enquiry: EnquiryListItem }) {
+interface EnquiryLookups {
+  enquiryTypes: Lookup[];
+  propertyTypes: Lookup[];
+  areas: Lookup[];
+  bedroomCounts: Lookup[];
+  bathroomCounts: Lookup[];
+  leadStages: Lookup[];
+  viewTypes: Lookup[];
+  developers: Lookup[];
+  propertyStatuses: Lookup[];
+}
+
+export default function PipelineCard({
+  enquiry,
+  lookups,
+  clients,
+  properties,
+  taskTypes,
+  activityTypes,
+}: {
+  enquiry: EnquiryListItem;
+  lookups: EnquiryLookups;
+  clients: { id: string; name: string }[];
+  properties: { id: string; building: string | null; unit_number: string | null }[];
+  taskTypes: Lookup[];
+  activityTypes: Lookup[];
+}) {
+  const [open, setOpen] = useState(false);
   const type = enquiry.enquiry_enquiry_types[0]?.enquiry_types.name ?? null;
   const days = daysSince(enquiry.clientLastActivityDate);
   const activity = activityChip(days);
   const followUp = enquiry.clients?.follow_up_date ?? null;
 
   return (
-    <Link
-      href={`/enquiries/${enquiry.id}`}
-      className="block rounded-xl bg-gradient-to-br from-[#1c2438] via-[#15161e] to-[#101014] p-3 shadow-lg shadow-black/40 ring-1 ring-white/5 transition hover:ring-white/10 hover:from-[#212c47]"
-    >
-      <p className="truncate text-sm font-semibold text-zinc-100">{enquiry.clients ? enquiry.clients.name : 'No client'}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-        {type && (
-          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${TYPE_STYLES[type] ?? 'bg-blue-500/10 text-blue-400 ring-blue-500/20'}`}>
-            {type}
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="block w-full rounded-xl bg-gradient-to-br from-[#1c2438] via-[#15161e] to-[#101014] p-3 text-left shadow-lg shadow-black/40 ring-1 ring-white/5 transition hover:ring-white/10 hover:from-[#212c47]"
+      >
+        <p className="truncate text-sm font-semibold text-zinc-100">{enquiry.clients ? enquiry.clients.name : 'No client'}</p>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {type && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${TYPE_STYLES[type] ?? 'bg-blue-500/10 text-blue-400 ring-blue-500/20'}`}>
+              {type}
+            </span>
+          )}
+          <span
+            title="Days since last activity"
+            className={`inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${activity.className}`}
+          >
+            {activity.text}
           </span>
-        )}
-        <span
-          title="Days since last activity"
-          className={`inline-flex shrink-0 items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${activity.className}`}
-        >
-          {activity.text}
-        </span>
-      </div>
-      <div className="mt-2 flex items-center justify-between">
-        {enquiry.budget ? <p className="text-xs font-semibold text-white">AED {enquiry.budget.toLocaleString()}</p> : <span />}
-        <p className={`text-[10px] ${followUpClass(followUp)}`}>{followUp ? formatDate(followUp) : ''}</p>
-      </div>
-    </Link>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          {enquiry.budget ? <p className="text-xs font-semibold text-white">AED {enquiry.budget.toLocaleString()}</p> : <span />}
+          <p className={`text-[10px] ${followUpClass(followUp)}`}>{followUp ? formatDate(followUp) : ''}</p>
+        </div>
+      </button>
+
+      <EnquiryDetailModal
+        enquiry={enquiry}
+        lookups={lookups}
+        clients={clients}
+        properties={properties}
+        taskTypes={taskTypes}
+        activityTypes={activityTypes}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </>
   );
 }

@@ -40,7 +40,21 @@ function FilterGroup({ title, options, selected, onToggle }: { title: string; op
   );
 }
 
-export default function EnquiriesList({ enquiries, lookups }: { enquiries: EnquiryListItem[]; lookups: EnquiryLookups }) {
+export default function EnquiriesList({
+  enquiries,
+  lookups,
+  clients,
+  properties,
+  taskTypes,
+  activityTypes,
+}: {
+  enquiries: EnquiryListItem[];
+  lookups: EnquiryLookups;
+  clients: { id: string; name: string }[];
+  properties: { id: string; building: string | null; unit_number: string | null }[];
+  taskTypes: Lookup[];
+  activityTypes: Lookup[];
+}) {
   const [query, setQuery] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -279,7 +293,15 @@ export default function EnquiriesList({ enquiries, lookups }: { enquiries: Enqui
                           {stageExpanded && (
                             <div className="flex flex-col gap-4 px-4 pb-4">
                               {s.enquiries.map((e) => (
-                                <EnquiryCard key={e.id} enquiry={e} />
+                                <EnquiryCard
+                                  key={e.id}
+                                  enquiry={e}
+                                  lookups={lookups}
+                                  clients={clients}
+                                  properties={properties}
+                                  taskTypes={taskTypes}
+                                  activityTypes={activityTypes}
+                                />
                               ))}
                             </div>
                           )}

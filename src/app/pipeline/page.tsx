@@ -1,8 +1,18 @@
 import { getEnquiries, getEnquiryLookups, CLOSED_LEAD_STAGE_NAMES } from '@/lib/enquiries';
+import { getClientsBasic, getActivityTypes } from '@/lib/clients';
+import { getPropertiesBasic } from '@/lib/properties';
+import { getTaskTypes } from '@/lib/tasks';
 import PipelineKanban from '@/components/PipelineKanban';
 
 export default async function PipelinePage() {
-  const [enquiries, lookups] = await Promise.all([getEnquiries(), getEnquiryLookups()]);
+  const [enquiries, lookups, clients, properties, taskTypes, activityTypes] = await Promise.all([
+    getEnquiries(),
+    getEnquiryLookups(),
+    getClientsBasic(),
+    getPropertiesBasic(),
+    getTaskTypes(),
+    getActivityTypes(),
+  ]);
 
   const activeStages = lookups.leadStages.filter((s) => !CLOSED_LEAD_STAGE_NAMES.includes(s.name));
   const activeEnquiries = enquiries.filter((e) => {
@@ -18,7 +28,15 @@ export default async function PipelinePage() {
           <p className="text-sm text-zinc-500">{activeEnquiries.length} active enquiries</p>
         </div>
 
-        <PipelineKanban enquiries={activeEnquiries} stages={activeStages} />
+        <PipelineKanban
+          enquiries={activeEnquiries}
+          stages={activeStages}
+          lookups={lookups}
+          clients={clients}
+          properties={properties}
+          taskTypes={taskTypes}
+          activityTypes={activityTypes}
+        />
       </div>
     </div>
   );

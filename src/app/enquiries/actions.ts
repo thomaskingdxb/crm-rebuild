@@ -73,10 +73,13 @@ export async function createEnquiryAction(formData: FormData) {
   await syncAllEnquiryLinks(id, sel);
 
   revalidatePath('/enquiries');
-  redirect(`/enquiries/${id}`);
+  revalidatePath('/pipeline');
+  redirect('/enquiries');
 }
 
-export async function updateEnquiryAction(id: string, formData: FormData) {
+// Modal variants — same DB work as createEnquiryAction, but no redirect, so
+// the calling client component can close the modal and refresh in place.
+export async function updateEnquiryModalAction(id: string, formData: FormData) {
   const fields = readEnquiryForm(formData);
   const sel = readMultiSelectIds(formData);
 
@@ -87,15 +90,16 @@ export async function updateEnquiryAction(id: string, formData: FormData) {
 
   await syncAllEnquiryLinks(id, sel);
 
-  revalidatePath(`/enquiries/${id}`);
   revalidatePath('/enquiries');
-  redirect(`/enquiries/${id}`);
+  revalidatePath('/pipeline');
+  if (fields.client_id) revalidatePath(`/clients/${fields.client_id}`);
+  if (fields.property_id) revalidatePath(`/properties/${fields.property_id}`);
 }
 
-export async function deleteEnquiryAction(id: string) {
+export async function deleteEnquiryModalAction(id: string) {
   const { error } = await supabase.from('enquiries').delete().eq('id', id);
   if (error) throw error;
 
   revalidatePath('/enquiries');
-  redirect('/enquiries');
+  revalidatePath('/pipeline');
 }

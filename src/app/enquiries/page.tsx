@@ -1,9 +1,19 @@
 import Link from 'next/link';
 import { getEnquiries, getEnquiryLookups } from '@/lib/enquiries';
+import { getClientsBasic, getActivityTypes } from '@/lib/clients';
+import { getPropertiesBasic } from '@/lib/properties';
+import { getTaskTypes } from '@/lib/tasks';
 import EnquiriesList from '@/components/EnquiriesList';
 
 export default async function EnquiriesPage() {
-  const [enquiries, lookups] = await Promise.all([getEnquiries(), getEnquiryLookups()]);
+  const [enquiries, lookups, clients, properties, taskTypes, activityTypes] = await Promise.all([
+    getEnquiries(),
+    getEnquiryLookups(),
+    getClientsBasic(),
+    getPropertiesBasic(),
+    getTaskTypes(),
+    getActivityTypes(),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -21,7 +31,14 @@ export default async function EnquiriesPage() {
           </Link>
         </div>
 
-        <EnquiriesList enquiries={enquiries} lookups={lookups} />
+        <EnquiriesList
+          enquiries={enquiries}
+          lookups={lookups}
+          clients={clients}
+          properties={properties}
+          taskTypes={taskTypes}
+          activityTypes={activityTypes}
+        />
       </div>
     </div>
   );

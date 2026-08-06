@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClient, getClientLookups, getClientActivities, getActivityTypes, getClientsBasic } from '@/lib/clients';
 import { getClientTasks, getTaskTypes } from '@/lib/tasks';
-import { getClientEnquiries } from '@/lib/enquiries';
+import { getClientEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getClientProperties, getPropertiesBasic } from '@/lib/properties';
 import { getClientDeals, getDealLookups } from '@/lib/deals';
 import { updateClientAction, deleteClientAction } from '@/app/clients/actions';
@@ -25,7 +25,7 @@ const sectionClass = 'surface-card p-6';
 
 export default async function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties] = await Promise.all([
+  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties, enquiryLookups] = await Promise.all([
     getClient(id),
     getClientLookups(),
     getClientActivities(id),
@@ -38,6 +38,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
     getClientDeals(id),
     getDealLookups(),
     getPropertiesBasic(),
+    getEnquiryLookups(),
   ]);
 
   if (!client) notFound();
@@ -227,7 +228,15 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
             ) : (
               <div className="flex flex-col gap-4">
                 {enquiries.map((e) => (
-                  <EnquiryCard key={e.id} enquiry={e} />
+                  <EnquiryCard
+                    key={e.id}
+                    enquiry={e}
+                    lookups={enquiryLookups}
+                    clients={allClients}
+                    properties={allProperties}
+                    taskTypes={taskTypes}
+                    activityTypes={activityTypes}
+                  />
                 ))}
               </div>
             )}

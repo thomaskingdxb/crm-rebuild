@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getProperty, getPropertyLookups, getPropertiesBasic } from '@/lib/properties';
-import { getClientsBasic } from '@/lib/clients';
-import { getPropertyEnquiries } from '@/lib/enquiries';
+import { getClientsBasic, getActivityTypes } from '@/lib/clients';
+import { getPropertyEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getPropertyDeals, getDealLookups } from '@/lib/deals';
+import { getTaskTypes } from '@/lib/tasks';
 import { updatePropertyAction, deletePropertyAction } from '@/app/properties/actions';
 import DeleteButton from '@/components/DeleteButton';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -35,7 +36,7 @@ function PillGroup({ name, options, selectedIds }: { name: string; options: { id
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [property, lookups, clients, enquiries, deals, dealLookups, allProperties] = await Promise.all([
+  const [property, lookups, clients, enquiries, deals, dealLookups, allProperties, enquiryLookups, taskTypes, activityTypes] = await Promise.all([
     getProperty(id),
     getPropertyLookups(),
     getClientsBasic(),
@@ -43,6 +44,9 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
     getPropertyDeals(id),
     getDealLookups(),
     getPropertiesBasic(),
+    getEnquiryLookups(),
+    getTaskTypes(),
+    getActivityTypes(),
   ]);
 
   if (!property) notFound();
@@ -213,7 +217,15 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             ) : (
               <div className="flex flex-col gap-4">
                 {enquiries.map((e) => (
-                  <EnquiryCard key={e.id} enquiry={e} />
+                  <EnquiryCard
+                    key={e.id}
+                    enquiry={e}
+                    lookups={enquiryLookups}
+                    clients={clients}
+                    properties={allProperties}
+                    taskTypes={taskTypes}
+                    activityTypes={activityTypes}
+                  />
                 ))}
               </div>
             )}
