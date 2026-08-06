@@ -115,6 +115,14 @@ export interface DealStats {
   rentalsNetComms: number;
   commissionGross: number;
   commissionNet: number;
+  salesPending: number;
+  rentalsPending: number;
+  salesGrossPending: number;
+  rentalsGrossPending: number;
+  salesNetPending: number;
+  rentalsNetPending: number;
+  commissionGrossPending: number;
+  commissionNetPending: number;
 }
 
 export function computeDealStats(deals: DealWithRelations[]): DealStats {
@@ -127,24 +135,46 @@ export function computeDealStats(deals: DealWithRelations[]): DealStats {
     rentalsNetComms: 0,
     commissionGross: 0,
     commissionNet: 0,
+    salesPending: 0,
+    rentalsPending: 0,
+    salesGrossPending: 0,
+    rentalsGrossPending: 0,
+    salesNetPending: 0,
+    rentalsNetPending: 0,
+    commissionGrossPending: 0,
+    commissionNetPending: 0,
   };
 
   for (const d of deals) {
     const gross = grossCommission(d) ?? 0;
     const net = netCommission(d) ?? 0;
-    stats.commissionGross += gross;
-    stats.commissionNet += net;
-
-    if (d.deal_stages?.name !== 'Completed') continue;
     const category = dealCategory(d);
-    if (category === 'sale') {
-      stats.salesCompleted += 1;
-      stats.salesGrossComms += gross;
-      stats.salesNetComms += net;
-    } else if (category === 'rental') {
-      stats.rentalsCompleted += 1;
-      stats.rentalsGrossComms += gross;
-      stats.rentalsNetComms += net;
+    const isCompleted = d.deal_stages?.name === 'Completed';
+
+    if (isCompleted) {
+      stats.commissionGross += gross;
+      stats.commissionNet += net;
+      if (category === 'sale') {
+        stats.salesCompleted += 1;
+        stats.salesGrossComms += gross;
+        stats.salesNetComms += net;
+      } else if (category === 'rental') {
+        stats.rentalsCompleted += 1;
+        stats.rentalsGrossComms += gross;
+        stats.rentalsNetComms += net;
+      }
+    } else {
+      stats.commissionGrossPending += gross;
+      stats.commissionNetPending += net;
+      if (category === 'sale') {
+        stats.salesPending += 1;
+        stats.salesGrossPending += gross;
+        stats.salesNetPending += net;
+      } else if (category === 'rental') {
+        stats.rentalsPending += 1;
+        stats.rentalsGrossPending += gross;
+        stats.rentalsNetPending += net;
+      }
     }
   }
 

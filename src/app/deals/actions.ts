@@ -16,6 +16,14 @@ function pct(v: FormDataEntryValue | null): number | null {
   return n === null ? null : n / 100;
 }
 
+async function defaultStageId(dealTypeId: number | null): Promise<number | null> {
+  if (dealTypeId == null) return null;
+  const category = dealTypeId === 1 ? 'rental' : 'sale';
+  const { data, error } = await supabase.from('deal_stages').select('id').eq('category', category).eq('name', 'Unstaged').single();
+  if (error) return null;
+  return data.id;
+}
+
 function readDealForm(formData: FormData) {
   return {
     property_id: (formData.get('property_id') as string) || null,
@@ -38,6 +46,10 @@ export async function createDealAction(formData: FormData) {
   const id = await generateNextDealId();
   const fields = readDealForm(formData);
 
+  if (fields.deal_stage_id == null) {
+    fields.deal_stage_id = await defaultStageId(fields.deal_type_id);
+  }
+
   const { error } = await supabase.from('deals').insert({ id, ...fields });
   if (error) throw error;
 
@@ -47,6 +59,10 @@ export async function createDealAction(formData: FormData) {
 
 export async function updateDealAction(id: string, formData: FormData) {
   const fields = readDealForm(formData);
+
+  if (fields.deal_stage_id == null) {
+    fields.deal_stage_id = await defaultStageId(fields.deal_type_id);
+  }
 
   const { error } = await supabase.from('deals').update(fields).eq('id', id);
   if (error) throw error;
@@ -62,4 +78,26 @@ export async function deleteDealAction(id: string) {
 
   revalidatePath('/deals');
   redirect('/deals');
+}
+
+// Called from the Kanban board when a card is dragged into a new stage column.
+// Moving into MOU signed / Contract signed stamps date_agreed; moving into
+// Completed stamps date_completed — both set to today.
+export async function moveDealStageAction(dealId: string, newStageId: number) {
+  const { data: stage, error: stageError } = await supabase.from('deal_stages').select('name').eq('id', newStageId).single();
+  if (stageError) throw stageError;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const update: Record<string, unknown> = { deal_stage_id: newStageId };
+
+  if (stage.name === 'MOU signed' || stage.name === 'Contract signed') {
+    update.date_agreed = today;
+  } else if (stage.name === 'Completed') {
+    update.date_completed = today;
+  }
+
+  const { error } = await supabase.from('deals').update(update).eq('id', dealId);
+  if (error) throw error;
+
+  revalidatePath('/deals');
 }

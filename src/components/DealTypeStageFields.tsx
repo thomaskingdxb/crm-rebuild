@@ -29,8 +29,18 @@ export default function DealTypeStageFields({
   defaultDealStageId: number | null;
 }) {
   const [dealTypeId, setDealTypeId] = useState<number | null>(defaultDealTypeId);
+  const [stageId, setStageId] = useState<number | null>(defaultDealStageId);
+
   const category = categoryFor(dealTypeId);
   const stages = category === 'rental' ? rentalStages : category === 'sale' ? saleStages : [];
+
+  function handleTypeChange(newDealTypeId: number | null) {
+    setDealTypeId(newDealTypeId);
+    const newCategory = categoryFor(newDealTypeId);
+    const newStages = newCategory === 'rental' ? rentalStages : newCategory === 'sale' ? saleStages : [];
+    // Default new/changed deals to "Unstaged" so they always show up in the Kanban board.
+    setStageId(newStages[0]?.id ?? null);
+  }
 
   return (
     <>
@@ -38,8 +48,8 @@ export default function DealTypeStageFields({
         <label className={labelClass}>Deal type</label>
         <select
           name="deal_type_id"
-          defaultValue={defaultDealTypeId ?? ''}
-          onChange={(e) => setDealTypeId(e.target.value ? Number(e.target.value) : null)}
+          value={dealTypeId ?? ''}
+          onChange={(e) => handleTypeChange(e.target.value ? Number(e.target.value) : null)}
           className={inputClass}
         >
           <option value="">—</option>
@@ -57,7 +67,14 @@ export default function DealTypeStageFields({
           <div className="flex flex-wrap gap-2">
             {stages.map((s) => (
               <label key={s.id} className="cursor-pointer">
-                <input type="radio" name="deal_stage_id" value={s.id} defaultChecked={defaultDealStageId === s.id} className="peer sr-only" />
+                <input
+                  type="radio"
+                  name="deal_stage_id"
+                  value={s.id}
+                  checked={stageId === s.id}
+                  onChange={() => setStageId(s.id)}
+                  className="peer sr-only"
+                />
                 <span className={pillSpanClass}>{s.name}</span>
               </label>
             ))}
