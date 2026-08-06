@@ -114,7 +114,7 @@ export default function ROICalculator({
       pdf.setFillColor(...bg);
       pdf.rect(0, 0, pageW, 297, 'F');
 
-      // Header: logo + title
+      // Header: logo, title, subtitle
       try {
         const logoResp = await fetch('/branding/lig-logo.png');
         const logoBlob = await logoResp.blob();
@@ -130,17 +130,18 @@ export default function ROICalculator({
       } catch {
         // logo optional — continue without it if it fails to load
       }
+      y += 16;
 
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(15);
+      pdf.setFontSize(16);
       pdf.setTextColor(...goldBright);
-      pdf.text('Property ROI Calculator', pageW - marginX, y, { align: 'right' });
-      y += 5.5;
+      pdf.text('ROI Calculator', marginX, y);
+      y += 6;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
-      pdf.text('Prepared by Thomas King', pageW - marginX, y, { align: 'right' });
-      y += 14;
+      pdf.text('Luxury Invest Group', marginX, y);
+      y += 10;
 
       const displayBuilding = includeUnitNumber && unitNumber ? `${building || '—'} - ${unitNumber}` : building || '—';
 
@@ -153,7 +154,7 @@ export default function ROICalculator({
       pdf.setTextColor(...textLight);
       pdf.text(includeClientName ? owner || '—' : '—', marginX, y);
       pdf.text(displayBuilding, marginX + contentW / 2, y);
-      y += 9;
+      y += 10;
 
       function sectionLabel(text: string) {
         pdf.setFont('helvetica', 'bold');
@@ -180,43 +181,26 @@ export default function ROICalculator({
         pdf.setFont('helvetica', 'normal');
       }
 
-      function colStat(label: string, value: string, colX: number, colY: number) {
-        pdf.setFontSize(7);
-        pdf.setTextColor(...textFaint);
-        pdf.text(label.toUpperCase(), colX, colY);
-        pdf.setFontSize(10);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setTextColor(...textLight);
-        pdf.text(value, colX, colY + 5);
-        pdf.setFont('helvetica', 'normal');
-      }
-
       // Property details
       sectionLabel('Property Details');
-      cardStart(34);
-      const colW = contentW / 4;
-      colStat('Location', location || '—', marginX + 4, y + 7);
-      colStat('Bedrooms', bedrooms || '—', marginX + colW + 4, y + 7);
-      colStat('Size', sqft ? `${sqft} sqft` : '—', marginX + colW * 2 + 4, y + 7);
-      colStat('Purchase price', fmt(calc.price), marginX + colW * 3 + 4, y + 7);
-
-      const subY = y + 17;
-      const subBoxW = (contentW - 12) / 2;
-      pdf.setFillColor(13, 27, 46);
-      pdf.setDrawColor(...borderFaint);
-      pdf.roundedRect(marginX + 4, subY, subBoxW, 12, 1.5, 1.5, 'FD');
-      pdf.roundedRect(marginX + subBoxW + 8, subY, subBoxW, 12, 1.5, 1.5, 'FD');
-      colStat('DLD 4%', fmt(calc.dld), marginX + 8, subY + 8);
-      colStat('Purchase price incl. DLD', fmt(calc.priceInclDld), marginX + subBoxW + 12, subY + 8);
-      y += 40;
+      cardStart(36);
+      let ry = y + 6;
+      row('Location', location || '—', ry);
+      ry += 6;
+      row('Bedrooms', bedrooms || '—', ry);
+      ry += 6;
+      row('Size', sqft ? `${sqft} sqft` : '—', ry);
+      ry += 6;
+      row('Purchase price', fmt(calc.price), ry);
+      ry += 6;
+      row('Purchase price incl. DLD (4%)', fmt(calc.priceInclDld), ry, true, goldBright);
+      y += 42;
 
       // Annual costs
       sectionLabel('Annual Costs');
       cardStart(38);
-      let ry = y + 6;
-      row('Service charges per sqft', `AED ${scPsf || 0}/sqft`, ry);
-      ry += 6;
-      row('Annual service charges', fmt(calc.scAnnual), ry);
+      ry = y + 6;
+      row('Service charges', fmt(calc.scAnnual), ry);
       ry += 6;
       row('Management fee', fmt(calc.mgmt), ry);
       ry += 6;
@@ -277,36 +261,43 @@ export default function ROICalculator({
       y += 14;
 
       // Footer
+      const centerX = pageW / 2;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
       y += 7;
+
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(10);
       pdf.setTextColor(...goldBright);
       pdf.text('Thomas King', marginX, y);
+      y += 4.5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
       pdf.setTextColor(...textFaint);
-      pdf.text('SALES ADVISOR', marginX, y + 4.5);
+      pdf.text('SALES ADVISOR', marginX, y);
+      y += 6;
 
-      const centerX = pageW / 2;
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
-      pdf.text('+971 50 167 0251', centerX, y - 3, { align: 'center' });
-      pdf.text('Thomas.king@luxuryinvestgroup.com', centerX, y + 1.5, { align: 'center' });
-      pdf.text('luxuryinvestgroup.com', centerX, y + 6, { align: 'center' });
+      pdf.text('+971 50 167 0251', marginX, y);
+      y += 5;
+      pdf.text('Thomas.king@luxuryinvestgroup.com', marginX, y);
+      y += 5;
+      pdf.text('luxuryinvestgroup.com', marginX, y);
+      y += 8;
 
-      pdf.setFontSize(8);
+      pdf.setFontSize(8.5);
       pdf.setTextColor(...gold);
-      pdf.text('Instagram', pageW - marginX - 22, y - 3, { align: 'right' });
+      pdf.text('Instagram', marginX, y);
       pdf.setTextColor(...textMuted);
-      pdf.text('@t.king.lux', pageW - marginX, y - 3, { align: 'right' });
+      pdf.text('@t.king.lux', marginX + 18, y);
+      y += 5;
       pdf.setTextColor(...gold);
-      pdf.text('TikTok', pageW - marginX - 22, y + 1.5, { align: 'right' });
+      pdf.text('TikTok', marginX, y);
       pdf.setTextColor(...textMuted);
-      pdf.text('@t.king.lux', pageW - marginX, y + 1.5, { align: 'right' });
+      pdf.text('@t.king.lux', marginX + 18, y);
+      y += 10;
 
-      y += 14;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
       y += 5;
