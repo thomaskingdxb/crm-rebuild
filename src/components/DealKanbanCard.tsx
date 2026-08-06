@@ -41,7 +41,9 @@ export default function DealKanbanCard({
         <p className="truncate text-sm font-semibold text-zinc-100">
           {deal.properties ? `${deal.properties.building ?? 'Unnamed'} ${deal.properties.unit_number ? `· ${deal.properties.unit_number}` : ''}` : 'No property'}
         </p>
-        <p className="mt-0.5 truncate text-xs text-zinc-500">{deal.owner ? deal.owner.name : 'No owner'}</p>
+        <p className="mt-0.5 truncate text-xs text-zinc-500">
+          {deal.owner ? deal.owner.name : 'No owner'} → {deal.buyer ? deal.buyer.name : 'No buyer/tenant'}
+        </p>
         <div className="mt-2 flex items-center justify-between">
           {deal.value ? <p className="text-xs font-semibold text-white">AED {deal.value.toLocaleString()}</p> : <span />}
           {gross !== null && <p className="text-[10px] text-zinc-500">AED {gross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>}
