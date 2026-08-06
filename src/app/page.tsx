@@ -231,13 +231,34 @@ function CommissionStatCard({
   );
 }
 
+function dubaiGreeting(): string {
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', hour: 'numeric', hour12: false }).format(new Date()));
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 17) return 'Good afternoon';
+  if (hour >= 17 && hour < 21) return 'Good evening';
+  return 'Good night';
+}
+
+function dubaiDate(): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Dubai',
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date());
+}
+
 export default async function DashboardPage() {
   const stats = await getDashboardStats();
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
       <div className="px-6 py-8">
-        <h1 className="text-2xl font-semibold text-zinc-100">Dashboard</h1>
+        <p className="text-xs font-medium text-zinc-500">{dubaiDate()}</p>
+        <h1 className="mt-1 text-2xl font-semibold text-zinc-100">
+          {dubaiGreeting()}, <span className="text-blue-300">T.King.Lux</span>
+        </h1>
         <p className="mb-6 text-sm text-zinc-500">Overview across clients, pipeline, deals, and tasks.</p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
