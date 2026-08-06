@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { label: 'Follow Ups', href: '/follow-ups', available: true },
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
+  { label: 'Calculators', href: '/calculators', available: true },
 ];
 
 export default function Nav() {
@@ -54,7 +55,7 @@ export default function Nav() {
             </div>
 
             {NAV_ITEMS.map((item) => {
-              const active = pathname === item.href;
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               if (!item.available) {
                 return (
                   <span

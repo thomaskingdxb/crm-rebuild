@@ -86,11 +86,19 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
               )}
             </p>
           </div>
-          <DeleteButton
-            label="Delete Property"
-            confirmText={`Delete ${property.building ?? property.id}? This cannot be undone.`}
-            action={deleteWithId}
-          />
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/calculators/roi?property=${property.id}`}
+              className="rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:ring-white/20"
+            >
+              Calculate ROI
+            </Link>
+            <DeleteButton
+              label="Delete Property"
+              confirmText={`Delete ${property.building ?? property.id}? This cannot be undone.`}
+              action={deleteWithId}
+            />
+          </div>
         </div>
 
         <form action={updateWithId} className={`mt-6 space-y-4 ${sectionClass}`}>
