@@ -80,8 +80,8 @@ export default function ROICalculator({
 
     const totalCosts = scAnnual + mgmt + maintenanceN + otherCostsN;
     const netRent = grossRentN - totalCosts;
-    const grossROI = price > 0 ? (grossRentN / price) * 100 : 0;
     const roiBase = roiMode === 'excl' ? price : priceInclDld;
+    const grossROI = roiBase > 0 ? (grossRentN / roiBase) * 100 : 0;
     const netROI = roiBase > 0 ? (netRent / roiBase) * 100 : 0;
 
     return { price, dld, priceInclDld, scAnnual, mgmt, totalCosts, netRent, grossROI, netROI };
@@ -103,7 +103,6 @@ export default function ROICalculator({
       const card: [number, number, number] = [26, 45, 71];
       const borderFaint: [number, number, number] = [47, 51, 50];
       const borderCard: [number, number, number] = [73, 68, 54];
-      const borderLine: [number, number, number] = [64, 62, 53];
       const textLight: [number, number, number] = [240, 230, 208];
       const textMuted: [number, number, number] = [155, 168, 184];
       const textFaint: [number, number, number] = [107, 120, 136];
@@ -165,64 +164,61 @@ export default function ROICalculator({
         pdf.setFont('helvetica', 'normal');
       }
 
-      function cardStart(height: number) {
+      const rowDivider: [number, number, number] = [40, 58, 84];
+      const rowH = 7;
+      const padV = 6;
+
+      function dataCard(rows: { label: string; value: string; bold?: boolean; color?: [number, number, number] }[]) {
+        const height = padV * 2 + (rows.length - 1) * rowH;
         pdf.setFillColor(...card);
         pdf.setDrawColor(...borderCard);
         pdf.roundedRect(marginX, y, contentW, height, 2, 2, 'FD');
-      }
 
-      function row(label: string, value: string, rowY: number, bold = false, color: [number, number, number] = textLight) {
-        pdf.setFontSize(9.5);
-        pdf.setTextColor(...textMuted);
-        pdf.text(label, marginX + 4, rowY);
-        pdf.setFont('helvetica', bold ? 'bold' : 'normal');
-        pdf.setTextColor(...color);
-        pdf.text(value, marginX + contentW - 4, rowY, { align: 'right' });
-        pdf.setFont('helvetica', 'normal');
+        const firstBaseline = y + padV + 2.2;
+        rows.forEach((r, i) => {
+          const rowY = firstBaseline + i * rowH;
+          if (i > 0) {
+            pdf.setDrawColor(...rowDivider);
+            pdf.line(marginX + 4, rowY - rowH / 2, marginX + contentW - 4, rowY - rowH / 2);
+          }
+          pdf.setFontSize(9.5);
+          pdf.setTextColor(...textMuted);
+          pdf.text(r.label, marginX + 4, rowY);
+          pdf.setFont('helvetica', r.bold ? 'bold' : 'normal');
+          pdf.setTextColor(...(r.color ?? textLight));
+          pdf.text(r.value, marginX + contentW - 4, rowY, { align: 'right' });
+          pdf.setFont('helvetica', 'normal');
+        });
+
+        y += height + 6;
       }
 
       // Property details
       sectionLabel('Property Details');
-      cardStart(36);
-      let ry = y + 6;
-      row('Location', location || '—', ry);
-      ry += 6;
-      row('Bedrooms', bedrooms || '—', ry);
-      ry += 6;
-      row('Size', sqft ? `${sqft} sqft` : '—', ry);
-      ry += 6;
-      row('Purchase price', fmt(calc.price), ry);
-      ry += 6;
-      row('Purchase price incl. DLD (4%)', fmt(calc.priceInclDld), ry, true, goldBright);
-      y += 42;
+      dataCard([
+        { label: 'Location', value: location || '—' },
+        { label: 'Bedrooms', value: bedrooms || '—' },
+        { label: 'Size', value: sqft ? `${sqft} sqft` : '—' },
+        { label: 'Purchase price', value: fmt(calc.price) },
+        { label: 'Purchase price incl. DLD (4%)', value: fmt(calc.priceInclDld), bold: true, color: goldBright },
+      ]);
 
       // Annual costs
       sectionLabel('Annual Costs');
-      cardStart(38);
-      ry = y + 6;
-      row('Service charges', fmt(calc.scAnnual), ry);
-      ry += 6;
-      row('Management fee', fmt(calc.mgmt), ry);
-      ry += 6;
-      row('Maintenance', fmt(parseFloat(maintenance) || 0), ry);
-      ry += 6;
-      row('Other costs', fmt(parseFloat(otherCosts) || 0), ry);
-      ry += 7;
-      pdf.setDrawColor(...borderLine);
-      pdf.line(marginX + 4, ry - 4, marginX + contentW - 4, ry - 4);
-      row('Total annual costs', fmt(calc.totalCosts), ry, true, goldBright);
-      y += 44;
+      dataCard([
+        { label: 'Service charges', value: fmt(calc.scAnnual) },
+        { label: 'Management fee', value: fmt(calc.mgmt) },
+        { label: 'Maintenance', value: fmt(parseFloat(maintenance) || 0) },
+        { label: 'Other costs', value: fmt(parseFloat(otherCosts) || 0) },
+        { label: 'Total annual costs', value: fmt(calc.totalCosts), bold: true, color: goldBright },
+      ]);
 
       // Rental income
       sectionLabel('Rental Income');
-      cardStart(20);
-      ry = y + 6;
-      row('Gross rental income', fmt(parseFloat(grossRent) || 0), ry);
-      ry += 7;
-      pdf.setDrawColor(...borderLine);
-      pdf.line(marginX + 4, ry - 4, marginX + contentW - 4, ry - 4);
-      row('Net rental income', fmt(calc.netRent), ry, true, emerald);
-      y += 26;
+      dataCard([
+        { label: 'Gross rental income', value: fmt(parseFloat(grossRent) || 0) },
+        { label: 'Net rental income', value: fmt(calc.netRent), bold: true, color: emerald },
+      ]);
 
       // Results
       sectionLabel('Results');
@@ -233,7 +229,7 @@ export default function ROICalculator({
       pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
       pdf.setTextColor(...gold);
-      pdf.text('GROSS ROI', marginX + 4, y + 7);
+      pdf.text(`GROSS ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + 4, y + 7);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(...goldBright);
@@ -254,7 +250,7 @@ export default function ROICalculator({
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
       pdf.setTextColor(...textFaint);
-      const note = `Gross ROI = gross rent / purchase price. Net ROI = net income / purchase price (${
+      const note = `Gross ROI = gross rent / purchase price. Net ROI = net income / purchase price (both ${
         roiMode === 'excl' ? 'excl DLD' : 'incl DLD'
       }). Figures are estimates - always consult a licensed advisor.`;
       pdf.text(pdf.splitTextToSize(note, contentW), marginX, y);
@@ -497,7 +493,7 @@ export default function ROICalculator({
 
           <div className="grid grid-cols-2 gap-3 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <div className="rounded-lg p-3" style={{ backgroundColor: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.2)' }}>
-              <p className="text-[10px] uppercase tracking-wide text-blue-300">Gross ROI</p>
+              <p className="text-[10px] uppercase tracking-wide text-blue-300">Gross ROI ({roiMode === 'excl' ? 'excl' : 'incl'}. DLD)</p>
               <p className="text-lg font-semibold text-blue-200">{fmtP(calc.grossROI)}</p>
             </div>
             <div className="rounded-lg p-3" style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
@@ -507,8 +503,8 @@ export default function ROICalculator({
           </div>
 
           <p className="text-[10px] leading-relaxed text-zinc-600">
-            Gross ROI = gross rent ÷ purchase price. Net ROI = net income ÷ purchase price ({roiMode === 'excl' ? 'excl DLD' : 'incl DLD'}). Figures are
-            estimates — always consult a licensed advisor.
+            Gross ROI = gross rent ÷ purchase price. Net ROI = net income ÷ purchase price (both {roiMode === 'excl' ? 'excl DLD' : 'incl DLD'}). Figures
+            are estimates — always consult a licensed advisor.
           </p>
         </div>
 
