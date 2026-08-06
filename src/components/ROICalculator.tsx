@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getProperty } from '@/lib/properties';
 
 const inputClass =
@@ -15,6 +15,80 @@ function fmtP(n: number): string {
   return `${n.toFixed(2)}%`;
 }
 
+interface PropertyOption {
+  id: string;
+  label: string;
+}
+
+function PropertySearchSelect({
+  options,
+  value,
+  onChange,
+}: {
+  options: PropertyOption[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const selected = options.find((o) => o.id === value) ?? null;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options.slice(0, 50);
+    return options.filter((o) => o.label.toLowerCase().includes(q)).slice(0, 50);
+  }, [options, query]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <input
+        type="text"
+        value={open ? query : (selected?.label ?? '')}
+        placeholder="Search properties..."
+        onFocus={() => {
+          setOpen(true);
+          setQuery('');
+        }}
+        onChange={(e) => setQuery(e.target.value)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        className={inputClass}
+      />
+      {open && (
+        <div className="absolute z-10 mt-1 max-h-64 w-full overflow-y-auto rounded-lg bg-[#1a1a22] shadow-xl shadow-black/60 ring-1 ring-white/10">
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onChange('');
+              setOpen(false);
+            }}
+            className="block w-full px-3 py-2 text-left text-sm text-zinc-500 hover:bg-white/5"
+          >
+            — None, enter manually —
+          </button>
+          {filtered.map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                onChange(o.id);
+                setOpen(false);
+              }}
+              className="block w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-blue-500/10 hover:text-blue-300"
+            >
+              {o.label}
+            </button>
+          ))}
+          {filtered.length === 0 && <p className="px-3 py-2 text-sm text-zinc-500">No matches</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ROICalculator({
   properties,
   initialPropertyId,
@@ -24,6 +98,14 @@ export default function ROICalculator({
 }) {
   const [propertyId, setPropertyId] = useState(initialPropertyId ?? '');
   const [loadingProperty, setLoadingProperty] = useState(false);
+
+  const propertyOptions = useMemo<PropertyOption[]>(
+    () =>
+      [...properties]
+        .sort((a, b) => (a.building ?? a.id).localeCompare(b.building ?? b.id, undefined, { sensitivity: 'base' }))
+        .map((p) => ({ id: p.id, label: `${p.building ?? p.id}${p.unit_number ? ` - ${p.unit_number}` : ''}` })),
+    [properties]
+  );
 
   const [owner, setOwner] = useState('');
   const [building, setBuilding] = useState('');
@@ -102,13 +184,15 @@ export default function ROICalculator({
       const bg: [number, number, number] = [13, 27, 46];
       const card: [number, number, number] = [26, 45, 71];
       const borderFaint: [number, number, number] = [47, 51, 50];
-      const borderCard: [number, number, number] = [73, 68, 54];
+      const borderCard: [number, number, number] = [17, 30, 49];
       const textLight: [number, number, number] = [240, 230, 208];
       const textMuted: [number, number, number] = [155, 168, 184];
       const textFaint: [number, number, number] = [107, 120, 136];
       const gold: [number, number, number] = [184, 145, 68];
       const goldBright: [number, number, number] = [212, 168, 83];
       const emerald: [number, number, number] = [126, 203, 126];
+      const blue: [number, number, number] = [96, 165, 250];
+      const blueBright: [number, number, number] = [147, 197, 253];
 
       pdf.setFillColor(...bg);
       pdf.rect(0, 0, pageW, 297, 'F');
@@ -165,32 +249,34 @@ export default function ROICalculator({
       }
 
       const rowDivider: [number, number, number] = [40, 58, 84];
-      const rowH = 7;
-      const padV = 6;
+      const rowH = 8;
+      const padV = 4;
+      const capOffset = 1.2; // half cap-height, to center text ink within its row band
 
       function dataCard(rows: { label: string; value: string; bold?: boolean; color?: [number, number, number] }[]) {
-        const height = padV * 2 + (rows.length - 1) * rowH;
+        const height = padV * 2 + rows.length * rowH;
         pdf.setFillColor(...card);
         pdf.setDrawColor(...borderCard);
         pdf.roundedRect(marginX, y, contentW, height, 2, 2, 'FD');
 
-        const firstBaseline = y + padV + 2.2;
+        const cardTop = y;
         rows.forEach((r, i) => {
-          const rowY = firstBaseline + i * rowH;
+          const cellTop = cardTop + padV + i * rowH;
+          const baseline = cellTop + rowH / 2 + capOffset;
           if (i > 0) {
             pdf.setDrawColor(...rowDivider);
-            pdf.line(marginX + 4, rowY - rowH / 2, marginX + contentW - 4, rowY - rowH / 2);
+            pdf.line(marginX + 4, cellTop, marginX + contentW - 4, cellTop);
           }
           pdf.setFontSize(9.5);
           pdf.setTextColor(...textMuted);
-          pdf.text(r.label, marginX + 4, rowY);
+          pdf.text(r.label, marginX + 4, baseline);
           pdf.setFont('helvetica', r.bold ? 'bold' : 'normal');
           pdf.setTextColor(...(r.color ?? textLight));
-          pdf.text(r.value, marginX + contentW - 4, rowY, { align: 'right' });
+          pdf.text(r.value, marginX + contentW - 4, baseline, { align: 'right' });
           pdf.setFont('helvetica', 'normal');
         });
 
-        y += height + 6;
+        y += height + 8.5;
       }
 
       // Property details
@@ -224,15 +310,15 @@ export default function ROICalculator({
       sectionLabel('Results');
       const boxW = (contentW - 4) / 2;
       const boxH = 20;
-      pdf.setFillColor(41, 34, 20);
-      pdf.setDrawColor(...gold);
+      pdf.setFillColor(30, 41, 59);
+      pdf.setDrawColor(...blue);
       pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
-      pdf.setTextColor(...gold);
+      pdf.setTextColor(...blue);
       pdf.text(`GROSS ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + 4, y + 7);
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.setTextColor(...goldBright);
+      pdf.setTextColor(...blueBright);
       pdf.text(fmtP(calc.grossROI), marginX + 4, y + 15);
 
       pdf.setFont('helvetica', 'normal');
@@ -312,15 +398,7 @@ export default function ROICalculator({
           <p className="mb-4 text-sm font-semibold text-zinc-200">Property</p>
           <div className="mb-4">
             <label className={labelClass}>Link a property (optional)</label>
-            <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className={inputClass}>
-              <option value="">— None, enter manually —</option>
-              {properties.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.building ?? p.id}
-                  {p.unit_number ? ` - ${p.unit_number}` : ''}
-                </option>
-              ))}
-            </select>
+            <PropertySearchSelect options={propertyOptions} value={propertyId} onChange={setPropertyId} />
             {loadingProperty && <p className="mt-1 text-xs text-zinc-500">Loading property details...</p>}
           </div>
 
