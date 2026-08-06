@@ -257,7 +257,7 @@ export default async function DashboardPage() {
       <div className="px-6 py-8">
         <p className="text-xs font-medium text-zinc-500">{dubaiDate()}</p>
         <h1 className="mt-1 text-2xl font-semibold text-zinc-100">
-          {dubaiGreeting()}, <span className="text-blue-300">T.King.Lux</span>
+          {dubaiGreeting()}, <span className="text-zinc-100">Thomas King</span>
         </h1>
         <p className="mb-6 text-sm text-zinc-500">Overview across clients, pipeline, deals, and tasks.</p>
 
