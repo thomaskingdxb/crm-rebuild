@@ -29,7 +29,7 @@ function Lane({
   setDragOverStageId: (id: number | null) => void;
 }) {
   return (
-    <div className="rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5">
+    <div className="surface-card p-5">
       <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-200">
         {title} <span className="text-zinc-500">({deals.length})</span>
       </h2>
@@ -162,7 +162,7 @@ export default function DealsKanban({
       </div>
 
       {filtersOpen && (
-        <div className="mb-4 rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5 space-y-4">
+        <div className="mb-4 surface-card p-5 space-y-4">
           <div>
             <p className="mb-2 text-xs font-medium text-zinc-400">Deal Type</p>
             <div className="flex flex-wrap gap-2">
@@ -202,7 +202,7 @@ export default function DealsKanban({
         />
 
         {unassignedDeals.length > 0 && (
-          <div className="rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5">
+          <div className="surface-card p-5">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-zinc-200">
               Unassigned <span className="text-zinc-500">({unassignedDeals.length})</span>
             </h2>

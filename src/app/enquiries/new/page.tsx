@@ -37,7 +37,7 @@ export default async function NewEnquiryPage({ searchParams }: { searchParams: P
 
         <h1 className="mt-3 text-2xl font-semibold text-zinc-100 mb-6">Add Enquiry</h1>
 
-        <form action={createEnquiryAction} className="space-y-4 rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5">
+        <form action={createEnquiryAction} className="space-y-4 surface-card p-6">
           <div>
             <label className={labelClass}>Client *</label>
             <SearchableSelect

@@ -209,7 +209,7 @@ export default function EnquiriesList({ enquiries, lookups }: { enquiries: Enqui
       </div>
 
       {filtersOpen && (
-        <div className="mb-4 rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5 space-y-4">
+        <div className="mb-4 surface-card p-5 space-y-4">
           <FilterGroup title="Enquiry Type" options={lookups.enquiryTypes} selected={selected.enquiryType} onToggle={(id) => toggle('enquiryType', id)} />
           <FilterGroup title="Lead Stage" options={lookups.leadStages} selected={selected.leadStage} onToggle={(id) => toggle('leadStage', id)} />
           <FilterGroup title="Property Type" options={lookups.propertyTypes} selected={selected.propertyType} onToggle={(id) => toggle('propertyType', id)} />
@@ -248,7 +248,7 @@ export default function EnquiriesList({ enquiries, lookups }: { enquiries: Enqui
             const typeCount = g.stages.reduce((sum, s) => sum + s.enquiries.length, 0);
 
             return (
-              <div key={g.type} className="rounded-2xl bg-[#14141c] shadow-xl shadow-black/40 ring-1 ring-white/5">
+              <div key={g.type} className="surface-card">
                 <button
                   type="button"
                   onClick={() => toggleCollapsed(typeKey)}

@@ -67,7 +67,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           <DeleteButton label="Delete Deal" confirmText="Delete this deal? This cannot be undone." action={deleteWithId} />
         </div>
 
-        <form action={updateWithId} className="mt-6 max-w-xl space-y-4 rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5">
+        <form action={updateWithId} className="mt-6 max-w-xl space-y-4 surface-card p-6">
           <div>
             <label className={labelClass}>Property</label>
             <SearchableSelect

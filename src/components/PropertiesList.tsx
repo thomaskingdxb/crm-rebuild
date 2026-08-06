@@ -143,7 +143,7 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       </div>
 
       {filtersOpen && (
-        <div className="mb-4 rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5 space-y-4">
+        <div className="mb-4 surface-card p-5 space-y-4">
           <FilterGroup title="Status" options={lookups.propertyStatuses} selected={selected.status} onToggle={(id) => toggle('status', id)} />
           <FilterGroup title="Type" options={lookups.propertyTypes} selected={selected.type} onToggle={(id) => toggle('type', id)} />
           <FilterGroup title="Bedrooms" options={lookups.bedroomCounts} selected={selected.bedroom} onToggle={(id) => toggle('bedroom', id)} />

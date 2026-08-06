@@ -18,7 +18,7 @@ export default async function NewClientPage() {
 
         <h1 className="mt-3 text-2xl font-semibold text-zinc-100 mb-6">Add Client</h1>
 
-        <form action={createClientAction} className="space-y-4 rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5">
+        <form action={createClientAction} className="space-y-4 surface-card p-6">
           <div>
             <label className={labelClass}>Name *</label>
             <input name="name" required className={inputClass} />

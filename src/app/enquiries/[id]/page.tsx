@@ -14,7 +14,7 @@ import TaskCard from '@/components/TaskCard';
 import AddTaskButton from '@/components/AddTaskButton';
 import BackLink from '@/components/BackLink';
 
-const sectionCardClass = 'rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5';
+const sectionCardClass = 'surface-card p-6';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -99,7 +99,7 @@ export default async function EnquiryDetailPage({ params }: { params: Promise<{ 
           <DeleteButton label="Delete Enquiry" confirmText="Delete this enquiry? This cannot be undone." action={deleteWithId} />
         </div>
 
-        <form action={updateWithId} className="mt-6 max-w-xl space-y-4 rounded-2xl bg-[#14141c] p-6 shadow-xl shadow-black/40 ring-1 ring-white/5">
+        <form action={updateWithId} className="mt-6 max-w-xl space-y-4 surface-card p-6">
           <div>
             <label className={labelClass}>Client *</label>
             <SearchableSelect

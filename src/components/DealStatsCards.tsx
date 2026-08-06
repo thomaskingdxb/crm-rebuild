@@ -22,7 +22,7 @@ function StatCard({
   pendingRight: string;
 }) {
   return (
-    <div className="rounded-2xl bg-[#14141c] p-4 shadow-xl shadow-black/40 ring-1 ring-white/5">
+    <div className="surface-card p-4">
       <p className="mb-3 text-xs font-medium text-zinc-500">{title}</p>
       <div className="flex items-end justify-between gap-4">
         <div>

@@ -19,7 +19,7 @@ export default function Nav() {
 
   return (
     <>
-      <header className="flex items-center gap-3 border-b border-white/5 bg-[#0a0a0f] px-6 py-4">
+      <header className="sticky top-0 z-40 flex items-center gap-3 border-b border-white/5 bg-[#0a0a0f]/85 px-6 py-4 shadow-lg shadow-black/40 backdrop-blur-md">
         <button
           type="button"
           onClick={() => setOpen(true)}

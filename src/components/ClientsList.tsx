@@ -90,7 +90,7 @@ export default function ClientsList({
       </div>
 
       {filtersOpen && (
-        <div className="mb-4 rounded-2xl bg-[#14141c] p-5 shadow-xl shadow-black/40 ring-1 ring-white/5 space-y-4">
+        <div className="mb-4 surface-card p-5 space-y-4">
           <div>
             <p className="mb-2 text-xs font-medium text-zinc-400">Type</p>
             <div className="flex flex-wrap gap-2">
