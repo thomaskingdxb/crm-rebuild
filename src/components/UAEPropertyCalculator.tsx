@@ -3,6 +3,45 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getProperty } from '@/lib/properties';
 import PropertySearchSelect, { sortPropertyOptions, type PropertyOption } from '@/components/PropertySearchSelect';
+import { getUAEPropertyCalculation, saveUAEPropertyCalculation, deleteUAEPropertyCalculation } from '@/lib/calculatorPersistence';
+
+interface UAEPropertyInputs {
+  tab: 'mortgage' | 'roi';
+  price: string;
+  mDpPct: string;
+  mRatePct: string;
+  mTermYears: string;
+  mDldMode: 'pct' | 'manual';
+  mDldPct: string;
+  mDldManual: string;
+  mAgencyMode: 'pct' | 'manual';
+  mAgencyPct: string;
+  mAgencyManual: string;
+  mTrustee: 'title' | 'oqood';
+  rent: string;
+  sqft: string;
+  scRate: string;
+  rMgmtPct: string;
+  rMaint: string;
+  rOther: string;
+  rDldAdmin: string;
+  rDldMode: 'pct' | 'manual';
+  rDldPct: string;
+  rDldManual: string;
+  rAgencyMode: 'pct' | 'manual';
+  rAgencyPct: string;
+  rAgencyManual: string;
+  rTrustee: 'title' | 'oqood';
+  purchaseType: 'cash' | 'mortgage';
+  rMregAdmin: string;
+  rMfeesOther: string;
+  roiIncDld: boolean;
+  roiIncAgency: boolean;
+  roiIncTrustee: boolean;
+  roiIncMreg: boolean;
+  includeClientName: boolean;
+  includeUnitNumber: boolean;
+}
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -141,24 +180,141 @@ export default function UAEPropertyCalculator({
   const [roiIncMreg, setRoiIncMreg] = useState(false);
 
   const [exporting, setExporting] = useState(false);
+  const [savedPlanLoaded, setSavedPlanLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
-    if (!propertyId) return;
+    if (!propertyId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSavedPlanLoaded(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingProperty(true);
-    getProperty(propertyId)
-      .then((property) => {
-        if (!property) return;
-        setOwner(property.clients?.name ?? '');
-        setBuilding(property.building ?? '');
-        setUnitNumber(property.unit_number ?? '');
-        setPrice(property.asking_price != null ? String(property.asking_price) : '');
-        setRent(property.rental_income != null ? String(property.rental_income) : '');
-        setSqft(property.sqft != null ? String(property.sqft) : '');
-        setScRate(property.service_charge != null ? String(property.service_charge) : '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaveMessage('');
+    Promise.all([getProperty(propertyId), getUAEPropertyCalculation<UAEPropertyInputs>(propertyId)])
+      .then(([property, saved]) => {
+        if (property) {
+          setOwner(property.clients?.name ?? '');
+          setBuilding(property.building ?? '');
+          setUnitNumber(property.unit_number ?? '');
+          setPrice(property.asking_price != null ? String(property.asking_price) : '');
+          setRent(property.rental_income != null ? String(property.rental_income) : '');
+          setSqft(property.sqft != null ? String(property.sqft) : '');
+          setScRate(property.service_charge != null ? String(property.service_charge) : '');
+        }
+        if (saved) {
+          setTab(saved.tab);
+          setPrice(saved.price);
+          setMDpPct(saved.mDpPct);
+          setMRatePct(saved.mRatePct);
+          setMTermYears(saved.mTermYears);
+          setMDldMode(saved.mDldMode);
+          setMDldPct(saved.mDldPct);
+          setMDldManual(saved.mDldManual);
+          setMAgencyMode(saved.mAgencyMode);
+          setMAgencyPct(saved.mAgencyPct);
+          setMAgencyManual(saved.mAgencyManual);
+          setMTrustee(saved.mTrustee);
+          setRent(saved.rent);
+          setSqft(saved.sqft);
+          setScRate(saved.scRate);
+          setRMgmtPct(saved.rMgmtPct);
+          setRMaint(saved.rMaint);
+          setROther(saved.rOther);
+          setRDldAdmin(saved.rDldAdmin);
+          setRDldMode(saved.rDldMode);
+          setRDldPct(saved.rDldPct);
+          setRDldManual(saved.rDldManual);
+          setRAgencyMode(saved.rAgencyMode);
+          setRAgencyPct(saved.rAgencyPct);
+          setRAgencyManual(saved.rAgencyManual);
+          setRTrustee(saved.rTrustee);
+          setPurchaseType(saved.purchaseType);
+          setRMregAdmin(saved.rMregAdmin);
+          setRMfeesOther(saved.rMfeesOther);
+          setRoiIncDld(saved.roiIncDld);
+          setRoiIncAgency(saved.roiIncAgency);
+          setRoiIncTrustee(saved.roiIncTrustee);
+          setRoiIncMreg(saved.roiIncMreg);
+          setIncludeClientName(saved.includeClientName);
+          setIncludeUnitNumber(saved.includeUnitNumber);
+          setSavedPlanLoaded(true);
+        } else {
+          setSavedPlanLoaded(false);
+        }
       })
       .finally(() => setLoadingProperty(false));
   }, [propertyId]);
+
+  async function handleSave() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      const inputs: UAEPropertyInputs = {
+        tab,
+        price,
+        mDpPct,
+        mRatePct,
+        mTermYears,
+        mDldMode,
+        mDldPct,
+        mDldManual,
+        mAgencyMode,
+        mAgencyPct,
+        mAgencyManual,
+        mTrustee,
+        rent,
+        sqft,
+        scRate,
+        rMgmtPct,
+        rMaint,
+        rOther,
+        rDldAdmin,
+        rDldMode,
+        rDldPct,
+        rDldManual,
+        rAgencyMode,
+        rAgencyPct,
+        rAgencyManual,
+        rTrustee,
+        purchaseType,
+        rMregAdmin,
+        rMfeesOther,
+        roiIncDld,
+        roiIncAgency,
+        roiIncTrustee,
+        roiIncMreg,
+        includeClientName,
+        includeUnitNumber,
+      };
+      await saveUAEPropertyCalculation(propertyId, inputs);
+      setSavedPlanLoaded(true);
+      setSaveMessage('Saved.');
+    } catch {
+      setSaveMessage('Failed to save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteSaved() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      await deleteUAEPropertyCalculation(propertyId);
+      setSavedPlanLoaded(false);
+      setSaveMessage('Deleted saved plan.');
+    } catch {
+      setSaveMessage('Failed to delete.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const serviceCharge = useMemo(() => {
     const s = parseFloat(sqft) || 0;
@@ -976,6 +1132,37 @@ export default function UAEPropertyCalculator({
             </label>
           </div>
         </div>
+
+        {propertyId && (
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-zinc-400">{savedPlanLoaded ? 'Saved plan for this property' : 'No saved plan for this property'}</p>
+                {saveMessage && <p className="mt-1 text-xs text-zinc-500">{saveMessage}</p>}
+              </div>
+              <div className="flex gap-2">
+                {savedPlanLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSaved}
+                    disabled={saving}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/10 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10 hover:ring-white/20 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : savedPlanLoaded ? 'Update saved plan' : 'Save plan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

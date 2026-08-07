@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getProperty } from '@/lib/properties';
 import PropertySearchSelect, { sortPropertyOptions, type PropertyOption } from '@/components/PropertySearchSelect';
+import { getOffPlanCalculation, saveOffPlanCalculation, deleteOffPlanCalculation, type OffPlanRow } from '@/lib/calculatorPersistence';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -42,6 +43,23 @@ const statusBadgeClass: Record<string, string> = {
 
 const statusLabel: Record<string, string> = { unpaid: 'Unpaid', partial: 'Partial', paid: 'Paid' };
 
+interface OffPlanInputs {
+  originalPrice: string;
+  askingPrice: string;
+  nocFee: string;
+  pctConstruction: string;
+  pctHandover: string;
+  postOn: boolean;
+  pctPost: string;
+  sAgencyPct: string;
+  bAgencyPct: string;
+  trusteeType: 'title' | 'oqood';
+  view: 'seller' | 'buyer';
+  includeClientName: boolean;
+  includeUnitNumber: boolean;
+  includeSchedule: boolean;
+}
+
 export default function OffPlanCalculator({
   properties,
   initialPropertyId,
@@ -78,22 +96,103 @@ export default function OffPlanCalculator({
   const [rows, setRows] = useState<Row[]>([{ id: 1, milestone: 'Booking', manualLabel: '', date: '', pct: '', paid: '' }]);
   const [nextRowId, setNextRowId] = useState(2);
   const [exporting, setExporting] = useState(false);
+  const [savedPlanLoaded, setSavedPlanLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
-    if (!propertyId) return;
+    if (!propertyId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSavedPlanLoaded(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingProperty(true);
-    getProperty(propertyId)
-      .then((property) => {
-        if (!property) return;
-        setOwner(property.clients?.name ?? '');
-        setBuilding(property.building ?? '');
-        setUnitNumber(property.unit_number ?? '');
-        setOriginalPrice(property.op != null ? String(property.op) : '');
-        setAskingPrice(property.asking_price != null ? String(property.asking_price) : '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaveMessage('');
+    Promise.all([getProperty(propertyId), getOffPlanCalculation<OffPlanInputs>(propertyId)])
+      .then(([property, saved]) => {
+        if (property) {
+          setOwner(property.clients?.name ?? '');
+          setBuilding(property.building ?? '');
+          setUnitNumber(property.unit_number ?? '');
+          setOriginalPrice(property.op != null ? String(property.op) : '');
+          setAskingPrice(property.asking_price != null ? String(property.asking_price) : '');
+        }
+        if (saved) {
+          const s = saved.inputs;
+          setOriginalPrice(s.originalPrice);
+          setAskingPrice(s.askingPrice);
+          setNocFee(s.nocFee);
+          setPctConstruction(s.pctConstruction);
+          setPctHandover(s.pctHandover);
+          setPostOn(s.postOn);
+          setPctPost(s.pctPost);
+          setSAgencyPct(s.sAgencyPct);
+          setBAgencyPct(s.bAgencyPct);
+          setTrusteeType(s.trusteeType);
+          setView(s.view);
+          setIncludeClientName(s.includeClientName);
+          setIncludeUnitNumber(s.includeUnitNumber);
+          setIncludeSchedule(s.includeSchedule);
+          if (saved.rows.length > 0) {
+            setRows(saved.rows.map((r, i) => ({ id: i + 1, milestone: r.milestone, manualLabel: r.manualLabel, date: r.date, pct: r.pct, paid: r.paid })));
+            setNextRowId(saved.rows.length + 1);
+          }
+          setSavedPlanLoaded(true);
+        } else {
+          setSavedPlanLoaded(false);
+        }
       })
       .finally(() => setLoadingProperty(false));
   }, [propertyId]);
+
+  async function handleSave() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      const inputs: OffPlanInputs = {
+        originalPrice,
+        askingPrice,
+        nocFee,
+        pctConstruction,
+        pctHandover,
+        postOn,
+        pctPost,
+        sAgencyPct,
+        bAgencyPct,
+        trusteeType,
+        view,
+        includeClientName,
+        includeUnitNumber,
+        includeSchedule,
+      };
+      const rowsToSave: OffPlanRow[] = rows.map((r) => ({ milestone: r.milestone, manualLabel: r.manualLabel, date: r.date, pct: r.pct, paid: r.paid }));
+      await saveOffPlanCalculation(propertyId, inputs, rowsToSave);
+      setSavedPlanLoaded(true);
+      setSaveMessage('Saved.');
+    } catch {
+      setSaveMessage('Failed to save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteSaved() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      await deleteOffPlanCalculation(propertyId);
+      setSavedPlanLoaded(false);
+      setSaveMessage('Deleted saved plan.');
+    } catch {
+      setSaveMessage('Failed to delete.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function addRow() {
     setRows((prev) => [...prev, { id: nextRowId, milestone: 'On Construction', manualLabel: '', date: '', pct: '', paid: '' }]);
@@ -827,6 +926,37 @@ export default function OffPlanCalculator({
             </label>
           </div>
         </div>
+
+        {propertyId && (
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-zinc-400">{savedPlanLoaded ? 'Saved plan for this property' : 'No saved plan for this property'}</p>
+                {saveMessage && <p className="mt-1 text-xs text-zinc-500">{saveMessage}</p>}
+              </div>
+              <div className="flex gap-2">
+                {savedPlanLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSaved}
+                    disabled={saving}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/10 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10 hover:ring-white/20 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : savedPlanLoaded ? 'Update saved plan' : 'Save plan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

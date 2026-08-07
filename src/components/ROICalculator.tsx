@@ -3,6 +3,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getProperty } from '@/lib/properties';
 import PropertySearchSelect, { sortPropertyOptions, type PropertyOption } from '@/components/PropertySearchSelect';
+import { getROICalculation, saveROICalculation, deleteROICalculation } from '@/lib/calculatorPersistence';
+
+interface ROIInputs {
+  sqft: string;
+  purchasePrice: string;
+  scPsf: string;
+  grossRent: string;
+  maintenance: string;
+  otherCosts: string;
+  mgmtPct: string;
+  mgmtManualOverride: boolean;
+  mgmtManual: string;
+  roiMode: 'excl' | 'incl';
+  includeClientName: boolean;
+  includeUnitNumber: boolean;
+}
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -49,26 +65,97 @@ export default function ROICalculator({
   const [mgmtManual, setMgmtManual] = useState('');
   const [roiMode, setRoiMode] = useState<'excl' | 'incl'>('excl');
   const [exporting, setExporting] = useState(false);
+  const [savedPlanLoaded, setSavedPlanLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
-    if (!propertyId) return;
+    if (!propertyId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSavedPlanLoaded(false);
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingProperty(true);
-    getProperty(propertyId)
-      .then((property) => {
-        if (!property) return;
-        setOwner(property.clients?.name ?? '');
-        setBuilding(property.building ?? '');
-        setUnitNumber(property.unit_number ?? '');
-        setLocation(property.property_areas[0]?.areas.name ?? '');
-        setBedrooms(property.property_bedroom_counts[0]?.bedroom_counts.name ?? '');
-        setSqft(property.sqft != null ? String(property.sqft) : '');
-        setPurchasePrice(property.asking_price != null ? String(property.asking_price) : '');
-        setScPsf(property.service_charge != null ? String(property.service_charge) : '');
-        setGrossRent(property.rental_income != null ? String(property.rental_income) : '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSaveMessage('');
+    Promise.all([getProperty(propertyId), getROICalculation<ROIInputs>(propertyId)])
+      .then(([property, saved]) => {
+        if (property) {
+          setOwner(property.clients?.name ?? '');
+          setBuilding(property.building ?? '');
+          setUnitNumber(property.unit_number ?? '');
+          setLocation(property.property_areas[0]?.areas.name ?? '');
+          setBedrooms(property.property_bedroom_counts[0]?.bedroom_counts.name ?? '');
+          setSqft(property.sqft != null ? String(property.sqft) : '');
+          setPurchasePrice(property.asking_price != null ? String(property.asking_price) : '');
+          setScPsf(property.service_charge != null ? String(property.service_charge) : '');
+          setGrossRent(property.rental_income != null ? String(property.rental_income) : '');
+        }
+        if (saved) {
+          setSqft(saved.sqft);
+          setPurchasePrice(saved.purchasePrice);
+          setScPsf(saved.scPsf);
+          setGrossRent(saved.grossRent);
+          setMaintenance(saved.maintenance);
+          setOtherCosts(saved.otherCosts);
+          setMgmtPct(saved.mgmtPct);
+          setMgmtManualOverride(saved.mgmtManualOverride);
+          setMgmtManual(saved.mgmtManual);
+          setRoiMode(saved.roiMode);
+          setIncludeClientName(saved.includeClientName);
+          setIncludeUnitNumber(saved.includeUnitNumber);
+          setSavedPlanLoaded(true);
+        } else {
+          setSavedPlanLoaded(false);
+        }
       })
       .finally(() => setLoadingProperty(false));
   }, [propertyId]);
+
+  async function handleSave() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      const inputs: ROIInputs = {
+        sqft,
+        purchasePrice,
+        scPsf,
+        grossRent,
+        maintenance,
+        otherCosts,
+        mgmtPct,
+        mgmtManualOverride,
+        mgmtManual,
+        roiMode,
+        includeClientName,
+        includeUnitNumber,
+      };
+      await saveROICalculation(propertyId, inputs);
+      setSavedPlanLoaded(true);
+      setSaveMessage('Saved.');
+    } catch {
+      setSaveMessage('Failed to save.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDeleteSaved() {
+    if (!propertyId) return;
+    setSaving(true);
+    setSaveMessage('');
+    try {
+      await deleteROICalculation(propertyId);
+      setSavedPlanLoaded(false);
+      setSaveMessage('Deleted saved plan.');
+    } catch {
+      setSaveMessage('Failed to delete.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const calc = useMemo(() => {
     const price = parseFloat(purchasePrice) || 0;
@@ -533,6 +620,37 @@ export default function ROICalculator({
             </label>
           </div>
         </div>
+
+        {propertyId && (
+          <div className="surface-card p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-zinc-400">{savedPlanLoaded ? 'Saved plan for this property' : 'No saved plan for this property'}</p>
+                {saveMessage && <p className="mt-1 text-xs text-zinc-500">{saveMessage}</p>}
+              </div>
+              <div className="flex gap-2">
+                {savedPlanLoaded && (
+                  <button
+                    type="button"
+                    onClick={handleDeleteSaved}
+                    disabled={saving}
+                    className="rounded-lg px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/10 disabled:opacity-50"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-200 ring-1 ring-inset ring-white/10 hover:ring-white/20 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : savedPlanLoaded ? 'Update saved plan' : 'Save plan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <button
           type="button"

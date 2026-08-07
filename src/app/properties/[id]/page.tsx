@@ -6,12 +6,14 @@ import { getPropertyEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getPropertyDeals, getDealLookups } from '@/lib/deals';
 import { getTaskTypes } from '@/lib/tasks';
 import { updatePropertyAction, deletePropertyAction } from '@/app/properties/actions';
+import { getSavedCalculatorSummary } from '@/lib/calculatorPersistence';
 import DeleteButton from '@/components/DeleteButton';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import EnquiryCard from '@/components/EnquiryCard';
 import DealCard from '@/components/DealCard';
 import BackLink from '@/components/BackLink';
+import CalculatorSummaryRow from '@/components/CalculatorSummaryRow';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -36,7 +38,7 @@ function PillGroup({ name, options, selectedIds }: { name: string; options: { id
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [property, lookups, clients, enquiries, deals, dealLookups, allProperties, enquiryLookups, taskTypes, activityTypes] = await Promise.all([
+  const [property, lookups, clients, enquiries, deals, dealLookups, allProperties, enquiryLookups, taskTypes, activityTypes, calculatorSummary] = await Promise.all([
     getProperty(id),
     getPropertyLookups(),
     getClientsBasic(),
@@ -47,6 +49,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
     getEnquiryLookups(),
     getTaskTypes(),
     getActivityTypes(),
+    getSavedCalculatorSummary(id),
   ]);
 
   if (!property) notFound();
@@ -225,6 +228,33 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
         </form>
 
         <div className="mt-6 space-y-6">
+          <div className={sectionClass}>
+            <h2 className="mb-4 text-sm font-semibold text-zinc-100">Calculators</h2>
+            <div className="flex flex-col gap-3">
+              <CalculatorSummaryRow
+                propertyId={property.id}
+                type="roi"
+                title="ROI Calculator"
+                href={`/calculators/roi?property=${property.id}`}
+                updatedAt={calculatorSummary.roi?.updatedAt ?? null}
+              />
+              <CalculatorSummaryRow
+                propertyId={property.id}
+                type="offplan"
+                title="Off-Plan Calculator"
+                href={`/calculators/offplan?property=${property.id}`}
+                updatedAt={calculatorSummary.offplan?.updatedAt ?? null}
+              />
+              <CalculatorSummaryRow
+                propertyId={property.id}
+                type="uae"
+                title="UAE Property Calculator"
+                href={`/calculators/uae-property?property=${property.id}`}
+                updatedAt={calculatorSummary.uaeProperty?.updatedAt ?? null}
+              />
+            </div>
+          </div>
+
           <div className={sectionClass}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-zinc-100">Enquiries ({enquiries.length})</h2>
