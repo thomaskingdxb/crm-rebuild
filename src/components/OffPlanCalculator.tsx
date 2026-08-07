@@ -421,7 +421,7 @@ export default function OffPlanCalculator({
         sectionLabel('Purchase Summary');
         dataCard([
           { label: 'Asking price', value: fmt(calc.ask) },
-          { label: 'Paid to seller to date', value: fmt(calc.totPaidAmt) },
+          { label: 'Paid to seller (paid to date + profit)', value: fmt(calc.transferAmt) },
           { label: 'Remaining pre-handover', value: fmt(calc.unpaidPreAmt) },
           { label: 'Handover amount', value: fmt(calc.handoverAmt) },
           { label: 'Post-handover remaining', value: fmt(calc.unpaidPostAmt) },
@@ -855,8 +855,8 @@ export default function OffPlanCalculator({
                   <p className="text-sm font-medium text-zinc-200">{fmt(calc.ask)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide text-zinc-500">Paid to seller</p>
-                  <p className="text-sm font-medium text-zinc-200">{fmt(calc.totPaidAmt)}</p>
+                  <p className="text-[10px] uppercase tracking-wide text-zinc-500">Paid to seller (paid to date + profit)</p>
+                  <p className="text-sm font-medium text-zinc-200">{fmt(calc.transferAmt)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-zinc-500">Remaining pre-handover</p>
