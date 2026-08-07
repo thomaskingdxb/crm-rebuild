@@ -14,10 +14,10 @@ const TOOLS = [
     available: true,
   },
   {
-    href: '#',
+    href: '/calculators/uae-property',
     title: 'UAE Property Calculator',
     description: 'Full purchase cost breakdown plus mortgage repayments and rental running costs.',
-    available: false,
+    available: true,
   },
 ];
 

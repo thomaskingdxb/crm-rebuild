@@ -99,6 +99,12 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             >
               Off-Plan Calculator
             </Link>
+            <Link
+              href={`/calculators/uae-property?property=${property.id}`}
+              className="rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:ring-white/20"
+            >
+              UAE Property Calculator
+            </Link>
             <DeleteButton
               label="Delete Property"
               confirmText={`Delete ${property.building ?? property.id}? This cannot be undone.`}
