@@ -24,7 +24,6 @@ interface UAEPropertyInputs {
   rMgmtPct: string;
   rMaint: string;
   rOther: string;
-  rDldAdmin: string;
   rDldMode: 'pct' | 'manual';
   rDldPct: string;
   rDldManual: string;
@@ -47,8 +46,9 @@ const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
 
-const TRUSTEE_FEE: Record<'title' | 'oqood', number> = { title: 4200, oqood: 5250 };
-const MORTGAGE_DLD_ADMIN = 580;
+const TRUSTEE_BASE_FEE: Record<'title' | 'oqood', number> = { title: 4000, oqood: 5000 };
+const TRUSTEE_FEE: Record<'title' | 'oqood', number> = { title: TRUSTEE_BASE_FEE.title * 1.05, oqood: TRUSTEE_BASE_FEE.oqood * 1.05 };
+const BUYER_DLD_ADMIN = 580;
 const MORTGAGE_REG_ADMIN = 290;
 
 function fmt(n: number): string {
@@ -162,7 +162,6 @@ export default function UAEPropertyCalculator({
   const [rMgmtPct, setRMgmtPct] = useState('5');
   const [rMaint, setRMaint] = useState('');
   const [rOther, setROther] = useState('');
-  const [rDldAdmin, setRDldAdmin] = useState('');
   const [rDldMode, setRDldMode] = useState<'pct' | 'manual'>('pct');
   const [rDldPct, setRDldPct] = useState('4');
   const [rDldManual, setRDldManual] = useState('');
@@ -224,7 +223,6 @@ export default function UAEPropertyCalculator({
           setRMgmtPct(saved.rMgmtPct);
           setRMaint(saved.rMaint);
           setROther(saved.rOther);
-          setRDldAdmin(saved.rDldAdmin);
           setRDldMode(saved.rDldMode);
           setRDldPct(saved.rDldPct);
           setRDldManual(saved.rDldManual);
@@ -273,7 +271,6 @@ export default function UAEPropertyCalculator({
         rMgmtPct,
         rMaint,
         rOther,
-        rDldAdmin,
         rDldMode,
         rDldPct,
         rDldManual,
@@ -334,7 +331,7 @@ export default function UAEPropertyCalculator({
     const agency = mAgencyMode === 'pct' ? (p * (parseFloat(mAgencyPct) || 0)) / 100 : parseFloat(mAgencyManual) || 0;
     const agencyVat = agency * 0.05;
     const trustee = TRUSTEE_FEE[mTrustee];
-    const dldCombined = dld + MORTGAGE_DLD_ADMIN;
+    const dldCombined = dld + BUYER_DLD_ADMIN;
     const mregCombined = loanAmt * 0.0025 + MORTGAGE_REG_ADMIN;
     const totalFees = dldCombined + agency + agencyVat + trustee + mregCombined;
     const totalUpfront = dpAmt + totalFees;
@@ -356,8 +353,7 @@ export default function UAEPropertyCalculator({
     const agency = rAgencyMode === 'pct' ? (p * (parseFloat(rAgencyPct) || 0)) / 100 : parseFloat(rAgencyManual) || 0;
     const agencyVat = agency * 0.05;
     const trustee = TRUSTEE_FEE[rTrustee];
-    const dldAdmin = parseFloat(rDldAdmin) || 0;
-    const dldCombined = dld + dldAdmin;
+    const dldCombined = dld + BUYER_DLD_ADMIN;
 
     const isMortgage = purchaseType === 'mortgage';
     let dpAmt = 0;
@@ -380,7 +376,8 @@ export default function UAEPropertyCalculator({
     const totalFees = dldCombined + agency + agencyVat + trustee + mregCombined;
     const totalUpfront = dpAmt + totalFees;
     const purchaseInclFees = p + totalFees;
-    const cashRequired = totalUpfront;
+    // Cash purchase: buyer funds the full price themselves. Mortgage: only the down payment (rest is financed).
+    const cashRequired = isMortgage ? totalUpfront : purchaseInclFees;
 
     const roiFees = (roiIncDld ? dldCombined : 0) + (roiIncAgency ? agency + agencyVat : 0) + (roiIncTrustee ? trustee : 0) + (roiIncMreg ? mregCombined : 0);
     const roiBase = p + roiFees;
@@ -427,7 +424,6 @@ export default function UAEPropertyCalculator({
     rAgencyPct,
     rAgencyManual,
     rTrustee,
-    rDldAdmin,
     purchaseType,
     mDpPct,
     mRatePct,
@@ -481,18 +477,18 @@ export default function UAEPropertyCalculator({
       } catch {
         // logo optional
       }
-      y += 16;
+      y += 14;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
       pdf.setTextColor(...goldBright);
       pdf.text('UAE Property Calculator', marginX, y);
-      y += 6;
+      y += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
       pdf.text(`Luxury Invest Group · ${tab === 'mortgage' ? 'Mortgage' : 'Purchase & ROI'}`, marginX, y);
-      y += 10;
+      y += 8;
 
       const displayBuilding = includeUnitNumber && unitNumber ? `${building || '—'} - ${unitNumber}` : building || '—';
 
@@ -500,26 +496,26 @@ export default function UAEPropertyCalculator({
       pdf.setTextColor(...gold);
       pdf.text('PREPARED FOR', marginX, y);
       pdf.text('PROPERTY', marginX + contentW / 2, y);
-      y += 5.5;
+      y += 5;
       pdf.setFontSize(11);
       pdf.setTextColor(...textLight);
       pdf.text(includeClientName ? owner || '—' : '—', marginX, y);
       pdf.text(displayBuilding, marginX + contentW / 2, y);
-      y += 10;
+      y += 8;
 
       function sectionLabel(text: string) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
         pdf.setTextColor(...gold);
         pdf.text(text.toUpperCase(), marginX, y);
-        y += 6;
+        y += 5;
         pdf.setFont('helvetica', 'normal');
       }
 
       const rowDivider: [number, number, number] = [40, 58, 84];
-      const rowH = 8;
-      const padV = 4;
-      const capOffset = 1.2;
+      const rowH = 6.5;
+      const padV = 2.5;
+      const capOffset = 1;
 
       function dataCard(dRows: { label: string; value: string; bold?: boolean; color?: [number, number, number] }[]) {
         const height = padV * 2 + dRows.length * rowH;
@@ -544,7 +540,7 @@ export default function UAEPropertyCalculator({
           pdf.setFont('helvetica', 'normal');
         });
 
-        y += height + 8.5;
+        y += height + 6;
       }
 
       if (tab === 'mortgage') {
@@ -558,26 +554,29 @@ export default function UAEPropertyCalculator({
 
         sectionLabel('Purchase Fees');
         dataCard([
-          { label: 'DLD (incl. admin)', value: fmt(mortgage.dldCombined) },
+          { label: `DLD (4% + AED ${BUYER_DLD_ADMIN} admin)`, value: fmt(mortgage.dldCombined) },
           { label: 'Agency fee (incl. VAT)', value: fmt(mortgage.agency + mortgage.agencyVat) },
-          { label: `Trustee (${mTrustee === 'title' ? 'Title Deed' : 'Oqood'})`, value: fmt(mortgage.trustee) },
-          { label: 'Mortgage registration', value: fmt(mortgage.mregCombined) },
+          {
+            label: `Trustee (${mTrustee === 'title' ? 'Title Deed' : 'Oqood'}: ${fmt(TRUSTEE_BASE_FEE[mTrustee])} + 5% VAT)`,
+            value: fmt(mortgage.trustee),
+          },
+          { label: `Mortgage registration (0.25% + AED ${MORTGAGE_REG_ADMIN} admin)`, value: fmt(mortgage.mregCombined) },
           { label: 'Total fees', value: fmt(mortgage.totalFees), bold: true, color: goldBright },
         ]);
 
         sectionLabel('Totals');
         const boxW = (contentW - 4) / 2;
-        const boxH = 20;
+        const boxH = 16;
         pdf.setFillColor(30, 41, 59);
         pdf.setDrawColor(...blue);
         pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
         pdf.setFontSize(8);
         pdf.setTextColor(...blue);
-        pdf.text('MONTHLY PAYMENT', marginX + 4, y + 7);
-        pdf.setFontSize(14);
+        pdf.text('MONTHLY PAYMENT', marginX + 4, y + 6);
+        pdf.setFontSize(13);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...blueBright);
-        pdf.text(fmt(mortgage.monthly), marginX + 4, y + 15);
+        pdf.text(fmt(mortgage.monthly), marginX + 4, y + 12.5);
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFillColor(41, 34, 20);
@@ -585,12 +584,12 @@ export default function UAEPropertyCalculator({
         pdf.roundedRect(marginX + boxW + 4, y, boxW, boxH, 2, 2, 'FD');
         pdf.setFontSize(8);
         pdf.setTextColor(...gold);
-        pdf.text('TOTAL UPFRONT (DP + FEES)', marginX + boxW + 8, y + 7);
-        pdf.setFontSize(14);
+        pdf.text('TOTAL UPFRONT (DP + FEES)', marginX + boxW + 8, y + 6);
+        pdf.setFontSize(13);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...goldBright);
-        pdf.text(fmt(mortgage.totalUpfront), marginX + boxW + 8, y + 15);
-        y += boxH + 8.5;
+        pdf.text(fmt(mortgage.totalUpfront), marginX + boxW + 8, y + 12.5);
+        y += boxH + 6;
       } else {
         sectionLabel('Purchase');
         dataCard([
@@ -616,17 +615,17 @@ export default function UAEPropertyCalculator({
 
         sectionLabel('Results');
         const boxW = (contentW - 4) / 2;
-        const boxH = 20;
+        const boxH = 16;
         pdf.setFillColor(30, 41, 59);
         pdf.setDrawColor(...blue);
         pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
         pdf.setFontSize(8);
         pdf.setTextColor(...blue);
-        pdf.text('GROSS ROI', marginX + 4, y + 7);
-        pdf.setFontSize(14);
+        pdf.text('GROSS ROI', marginX + 4, y + 6);
+        pdf.setFontSize(13);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(...blueBright);
-        pdf.text(fmtP(roi.grossROI), marginX + 4, y + 15);
+        pdf.text(fmtP(roi.grossROI), marginX + 4, y + 12.5);
 
         pdf.setFont('helvetica', 'normal');
         pdf.setFillColor(20, 40, 20);
@@ -634,23 +633,23 @@ export default function UAEPropertyCalculator({
         pdf.roundedRect(marginX + boxW + 4, y, boxW, boxH, 2, 2, 'FD');
         pdf.setFontSize(8);
         pdf.setTextColor(...emerald);
-        pdf.text('NET ROI', marginX + boxW + 8, y + 7);
-        pdf.setFontSize(14);
+        pdf.text('NET ROI', marginX + boxW + 8, y + 6);
+        pdf.setFontSize(13);
         pdf.setFont('helvetica', 'bold');
-        pdf.text(fmtP(roi.netROI), marginX + boxW + 8, y + 15);
-        y += boxH + 8.5;
+        pdf.text(fmtP(roi.netROI), marginX + boxW + 8, y + 12.5);
+        y += boxH + 6;
       }
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
       pdf.setTextColor(...textFaint);
       pdf.text('Figures are estimates - always consult a licensed advisor.', marginX, y);
-      y += 12;
+      y += 9;
 
       const centerX = pageW / 2;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
-      y += 8;
+      y += 7;
 
       const footerRow1 = y;
       const footerRow2 = y + 5;
@@ -792,7 +791,9 @@ export default function UAEPropertyCalculator({
                   computed={mortgage.agency}
                 />
               </div>
-              <p className="mt-2 text-[10px] text-zinc-500">DLD admin AED {MORTGAGE_DLD_ADMIN} and mortgage registration admin AED {MORTGAGE_REG_ADMIN} are added automatically.</p>
+              <p className="mt-2 text-[10px] text-zinc-500">
+                DLD is 4% + AED {BUYER_DLD_ADMIN} admin. Mortgage registration is 0.25% of the loan + AED {MORTGAGE_REG_ADMIN} admin. Both added automatically.
+              </p>
               <div className="mt-4">
                 <label className={labelClass}>Trustee registration type</label>
                 <div className="flex gap-2">
@@ -815,6 +816,10 @@ export default function UAEPropertyCalculator({
                     Oqood (AED 5,250)
                   </button>
                 </div>
+                <p className="mt-2 text-[10px] text-zinc-500">
+                  Title Deed: AED {TRUSTEE_BASE_FEE.title.toLocaleString()} + 5% VAT = AED {TRUSTEE_FEE.title.toLocaleString()} · Oqood: AED{' '}
+                  {TRUSTEE_BASE_FEE.oqood.toLocaleString()} + 5% VAT = AED {TRUSTEE_FEE.oqood.toLocaleString()}
+                </p>
               </div>
             </div>
           </>
@@ -874,11 +879,8 @@ export default function UAEPropertyCalculator({
                   onManualChange={setRAgencyManual}
                   computed={roi.agency}
                 />
-                <div>
-                  <label className={labelClass}>DLD admin fee (AED)</label>
-                  <input type="number" value={rDldAdmin} onChange={(e) => setRDldAdmin(e.target.value)} className={inputClass} />
-                </div>
               </div>
+              <p className="mt-2 text-[10px] text-zinc-500">DLD is 4% of the price plus a fixed AED {BUYER_DLD_ADMIN} admin fee, added automatically.</p>
               <div className="mt-4">
                 <label className={labelClass}>Trustee registration type</label>
                 <div className="flex gap-2">
@@ -901,6 +903,10 @@ export default function UAEPropertyCalculator({
                     Oqood (AED 5,250)
                   </button>
                 </div>
+                <p className="mt-2 text-[10px] text-zinc-500">
+                  Title Deed: AED {TRUSTEE_BASE_FEE.title.toLocaleString()} + 5% VAT = AED {TRUSTEE_FEE.title.toLocaleString()} · Oqood: AED{' '}
+                  {TRUSTEE_BASE_FEE.oqood.toLocaleString()} + 5% VAT = AED {TRUSTEE_FEE.oqood.toLocaleString()}
+                </p>
               </div>
             </div>
 
@@ -1006,7 +1012,7 @@ export default function UAEPropertyCalculator({
                 <p className="mb-2 text-xs font-medium text-zinc-400">Purchase fees</p>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">DLD (incl. admin)</span>
+                    <span className="text-zinc-500">DLD (4% + AED {BUYER_DLD_ADMIN} admin)</span>
                     <span className="text-zinc-300">{fmt(mortgage.dldCombined)}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1014,11 +1020,13 @@ export default function UAEPropertyCalculator({
                     <span className="text-zinc-300">{fmt(mortgage.agency + mortgage.agencyVat)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">Trustee</span>
+                    <span className="text-zinc-500">
+                      Trustee ({mTrustee === 'title' ? 'Title Deed' : 'Oqood'}: {fmt(TRUSTEE_BASE_FEE[mTrustee])} + 5% VAT)
+                    </span>
                     <span className="text-zinc-300">{fmt(mortgage.trustee)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">Mortgage registration</span>
+                    <span className="text-zinc-500">Mortgage reg. (0.25% + AED {MORTGAGE_REG_ADMIN} admin)</span>
                     <span className="text-zinc-300">{fmt(mortgage.mregCombined)}</span>
                   </div>
                   <div className="flex items-center justify-between pt-1.5 font-medium" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>

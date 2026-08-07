@@ -224,18 +224,18 @@ export default function ROICalculator({
       } catch {
         // logo optional — continue without it if it fails to load
       }
-      y += 16;
+      y += 14;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
       pdf.setTextColor(...goldBright);
       pdf.text('ROI Calculator', marginX, y);
-      y += 6;
+      y += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
       pdf.text('Luxury Invest Group', marginX, y);
-      y += 10;
+      y += 8;
 
       const displayBuilding = includeUnitNumber && unitNumber ? `${building || '—'} - ${unitNumber}` : building || '—';
 
@@ -243,26 +243,26 @@ export default function ROICalculator({
       pdf.setTextColor(...gold);
       pdf.text('PREPARED FOR', marginX, y);
       pdf.text('PROPERTY', marginX + contentW / 2, y);
-      y += 5.5;
+      y += 5;
       pdf.setFontSize(11);
       pdf.setTextColor(...textLight);
       pdf.text(includeClientName ? owner || '—' : '—', marginX, y);
       pdf.text(displayBuilding, marginX + contentW / 2, y);
-      y += 10;
+      y += 8;
 
       function sectionLabel(text: string) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
         pdf.setTextColor(...gold);
         pdf.text(text.toUpperCase(), marginX, y);
-        y += 6;
+        y += 5;
         pdf.setFont('helvetica', 'normal');
       }
 
       const rowDivider: [number, number, number] = [40, 58, 84];
-      const rowH = 8;
-      const padV = 4;
-      const capOffset = 1.2; // half cap-height, to center text ink within its row band
+      const rowH = 6.5;
+      const padV = 2.5;
+      const capOffset = 1; // half cap-height, to center text ink within its row band
 
       function dataCard(rows: { label: string; value: string; bold?: boolean; color?: [number, number, number] }[]) {
         const height = padV * 2 + rows.length * rowH;
@@ -287,7 +287,7 @@ export default function ROICalculator({
           pdf.setFont('helvetica', 'normal');
         });
 
-        y += height + 8.5;
+        y += height + 6;
       }
 
       // Property details
@@ -320,17 +320,17 @@ export default function ROICalculator({
       // Results
       sectionLabel('Results');
       const boxW = (contentW - 4) / 2;
-      const boxH = 20;
+      const boxH = 16;
       pdf.setFillColor(30, 41, 59);
       pdf.setDrawColor(...blue);
       pdf.roundedRect(marginX, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
       pdf.setTextColor(...blue);
-      pdf.text(`GROSS ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + 4, y + 7);
-      pdf.setFontSize(14);
+      pdf.text(`GROSS ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + 4, y + 6);
+      pdf.setFontSize(13);
       pdf.setFont('helvetica', 'bold');
       pdf.setTextColor(...blueBright);
-      pdf.text(fmtP(calc.grossROI), marginX + 4, y + 15);
+      pdf.text(fmtP(calc.grossROI), marginX + 4, y + 12.5);
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFillColor(20, 40, 20);
@@ -338,11 +338,11 @@ export default function ROICalculator({
       pdf.roundedRect(marginX + boxW + 4, y, boxW, boxH, 2, 2, 'FD');
       pdf.setFontSize(8);
       pdf.setTextColor(...emerald);
-      pdf.text(`NET ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + boxW + 8, y + 7);
-      pdf.setFontSize(14);
+      pdf.text(`NET ROI (${roiMode === 'excl' ? 'EXCL' : 'INCL'}. DLD)`, marginX + boxW + 8, y + 6);
+      pdf.setFontSize(13);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(fmtP(calc.netROI), marginX + boxW + 8, y + 15);
-      y += boxH + 8;
+      pdf.text(fmtP(calc.netROI), marginX + boxW + 8, y + 12.5);
+      y += boxH + 6;
 
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7);
@@ -351,13 +351,13 @@ export default function ROICalculator({
         roiMode === 'excl' ? 'excl DLD' : 'incl DLD'
       }). Figures are estimates - always consult a licensed advisor.`;
       pdf.text(pdf.splitTextToSize(note, contentW), marginX, y);
-      y += 14;
+      y += 9;
 
       // Footer
       const centerX = pageW / 2;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
-      y += 8;
+      y += 7;
 
       const footerRow1 = y;
       const footerRow2 = y + 5;

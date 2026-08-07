@@ -10,7 +10,9 @@ const inputClass =
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
 
 const MILESTONES = ['Booking', 'On Construction', 'On Handover', 'Post Handover', 'Other', 'Manual input'] as const;
-const TRUSTEE_FEE: Record<'title' | 'oqood', number> = { title: 4200, oqood: 5250 };
+const TRUSTEE_BASE_FEE: Record<'title' | 'oqood', number> = { title: 4000, oqood: 5000 };
+const TRUSTEE_FEE: Record<'title' | 'oqood', number> = { title: TRUSTEE_BASE_FEE.title * 1.05, oqood: TRUSTEE_BASE_FEE.oqood * 1.05 };
+const BUYER_DLD_ADMIN = 580;
 
 function fmt(n: number): string {
   return `AED ${Math.round(n).toLocaleString()}`;
@@ -251,7 +253,7 @@ export default function OffPlanCalculator({
 
     const bAgency = ask * (parseFloat(bAgencyPct) || 0) * 0.01 * 1.05;
     const bTrustee = TRUSTEE_FEE[trusteeType];
-    const bDld = ask * 0.04;
+    const bDld = ask * 0.04 + BUYER_DLD_ADMIN;
     const bFeesTotal = bDld + bAgency + bTrustee;
     const bTotalInclFees = ask + bFeesTotal;
     const bTransferTotal = transferAmt + bFeesTotal;
@@ -328,18 +330,18 @@ export default function OffPlanCalculator({
       } catch {
         // logo optional
       }
-      y += 16;
+      y += 14;
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
       pdf.setTextColor(...goldBright);
       pdf.text('Off-Plan Calculator', marginX, y);
-      y += 6;
+      y += 5;
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
       pdf.setTextColor(...textMuted);
       pdf.text(`Luxury Invest Group · ${view === 'seller' ? 'Seller view' : 'Buyer view'}`, marginX, y);
-      y += 10;
+      y += 8;
 
       const displayBuilding = includeUnitNumber && unitNumber ? `${building || '—'} - ${unitNumber}` : building || '—';
 
@@ -347,26 +349,26 @@ export default function OffPlanCalculator({
       pdf.setTextColor(...gold);
       pdf.text('PREPARED FOR', marginX, y);
       pdf.text('PROPERTY', marginX + contentW / 2, y);
-      y += 5.5;
+      y += 5;
       pdf.setFontSize(11);
       pdf.setTextColor(...textLight);
       pdf.text(includeClientName ? owner || '—' : '—', marginX, y);
       pdf.text(displayBuilding, marginX + contentW / 2, y);
-      y += 10;
+      y += 8;
 
       function sectionLabel(text: string) {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(9);
         pdf.setTextColor(...gold);
         pdf.text(text.toUpperCase(), marginX, y);
-        y += 6;
+        y += 5;
         pdf.setFont('helvetica', 'normal');
       }
 
       const rowDivider: [number, number, number] = [40, 58, 84];
-      const rowH = 8;
-      const padV = 4;
-      const capOffset = 1.2;
+      const rowH = 6.5;
+      const padV = 2.5;
+      const capOffset = 1;
 
       function dataCard(dRows: { label: string; value: string; bold?: boolean; color?: [number, number, number] }[]) {
         const height = padV * 2 + dRows.length * rowH;
@@ -391,7 +393,7 @@ export default function OffPlanCalculator({
           pdf.setFont('helvetica', 'normal');
         });
 
-        y += height + 8.5;
+        y += height + 6;
       }
 
       if (view === 'seller') {
@@ -421,17 +423,20 @@ export default function OffPlanCalculator({
         sectionLabel('Purchase Summary');
         dataCard([
           { label: 'Asking price', value: fmt(calc.ask) },
-          { label: 'Paid to seller (paid to date + profit)', value: fmt(calc.transferAmt) },
+          { label: 'Paid to seller', value: fmt(calc.transferAmt) },
           { label: 'Remaining pre-handover', value: fmt(calc.unpaidPreAmt) },
           { label: 'Handover amount', value: fmt(calc.handoverAmt) },
-          { label: 'Post-handover remaining', value: fmt(calc.unpaidPostAmt) },
+          ...(postOn ? [{ label: 'Post-handover remaining', value: fmt(calc.unpaidPostAmt) }] : []),
         ]);
 
         sectionLabel('Buyer Fees');
         dataCard([
-          { label: 'DLD (4%)', value: fmt(calc.bDld) },
+          { label: `DLD (4% + ${fmt(BUYER_DLD_ADMIN)} admin)`, value: fmt(calc.bDld) },
           { label: 'Agency fee (incl. VAT)', value: fmt(calc.bAgency) },
-          { label: `Trustee (${trusteeType === 'title' ? 'Title Deed' : 'Oqood'})`, value: fmt(calc.bTrustee) },
+          {
+            label: `Trustee (${trusteeType === 'title' ? 'Title Deed' : 'Oqood'}: ${fmt(TRUSTEE_BASE_FEE[trusteeType])} + 5% VAT)`,
+            value: fmt(calc.bTrustee),
+          },
           { label: 'Total fees', value: fmt(calc.bFeesTotal), bold: true, color: goldBright },
         ]);
 
@@ -489,7 +494,7 @@ export default function OffPlanCalculator({
           pdf.text(statusLabel[r.status], colX, rowY);
         });
 
-        y += tableH + 8.5;
+        y += tableH + 6;
       }
 
       pdf.setFont('helvetica', 'normal');
@@ -497,12 +502,12 @@ export default function OffPlanCalculator({
       pdf.setTextColor(...textFaint);
       const note = 'Figures are estimates - always consult a licensed advisor.';
       pdf.text(note, marginX, y);
-      y += 12;
+      y += 9;
 
       const centerX = pageW / 2;
       pdf.setDrawColor(...borderFaint);
       pdf.line(marginX, y, pageW - marginX, y);
-      y += 8;
+      y += 7;
 
       const footerRow1 = y;
       const footerRow2 = y + 5;
@@ -739,6 +744,10 @@ export default function OffPlanCalculator({
                 Oqood (AED 5,250)
               </button>
             </div>
+            <p className="mt-2 text-[10px] text-zinc-500">
+              Title Deed: AED 4,000 + 5% VAT = AED 4,200 · Oqood: AED 5,000 + 5% VAT = AED 5,250. Buyer DLD is 4% of asking price plus a fixed AED 580 admin
+              fee.
+            </p>
           </div>
         </div>
       </div>
@@ -872,7 +881,7 @@ export default function OffPlanCalculator({
                 <p className="mb-2 text-xs font-medium text-zinc-400">Buyer fees</p>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">DLD (4%)</span>
+                    <span className="text-zinc-500">DLD (4% + AED {BUYER_DLD_ADMIN} admin)</span>
                     <span className="text-zinc-300">{fmt(calc.bDld)}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -880,7 +889,9 @@ export default function OffPlanCalculator({
                     <span className="text-zinc-300">{fmt(calc.bAgency)}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-500">Trustee ({trusteeType === 'title' ? 'Title Deed' : 'Oqood'})</span>
+                    <span className="text-zinc-500">
+                      Trustee ({trusteeType === 'title' ? 'Title Deed' : 'Oqood'}: {fmt(TRUSTEE_BASE_FEE[trusteeType])} + 5% VAT)
+                    </span>
                     <span className="text-zinc-300">{fmt(calc.bTrustee)}</span>
                   </div>
                   <div className="flex items-center justify-between pt-1.5 font-medium" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
