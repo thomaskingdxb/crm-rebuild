@@ -836,6 +836,16 @@ export default function OffPlanCalculator({
                   <p className={`text-lg font-semibold ${calc.netProfit < 0 ? 'text-rose-300' : 'text-emerald-300'}`}>{fmt(calc.netProfit)}</p>
                 </div>
               </div>
+
+              <div className="pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span className="text-zinc-300">Transfer amount (paid to date + profit)</span>
+                  <span className="text-zinc-100">{fmt(calc.transferAmt)}</span>
+                </div>
+                <p className="mt-1 text-[10px] text-zinc-600">
+                  {fmt(calc.totPaidAmt)} + ({fmt(calc.ask)} - {fmt(calc.op)}) = {fmt(calc.transferAmt)}
+                </p>
+              </div>
             </>
           ) : (
             <>
