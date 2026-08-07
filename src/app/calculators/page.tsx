@@ -8,10 +8,10 @@ const TOOLS = [
     available: true,
   },
   {
-    href: '#',
+    href: '/calculators/offplan',
     title: 'Off-Plan Calculator',
     description: 'Buyer/seller resale profit on off-plan units, with payment schedule and DLD/NOC/trustee fees.',
-    available: false,
+    available: true,
   },
   {
     href: '#',
