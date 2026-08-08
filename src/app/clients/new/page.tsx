@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getClientLookups } from '@/lib/clients';
 import { createClientAction } from '@/app/clients/actions';
 import { createClient } from '@/lib/supabase/server';
+import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -38,30 +39,12 @@ export default async function NewClientPage() {
 
           <div>
             <span className={labelClass}>Type (select all that apply)</span>
-            <div className="flex flex-wrap gap-2">
-              {clientTypes.map((t) => (
-                <label key={t.id} className="cursor-pointer">
-                  <input type="checkbox" name="type_ids" value={t.id} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {t.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="type_ids" options={clientTypes} defaultSelectedIds={new Set()} placeholder="Search types..." />
           </div>
 
           <div>
             <span className={labelClass}>Status (select all that apply)</span>
-            <div className="flex flex-wrap gap-2">
-              {clientStatuses.map((s) => (
-                <label key={s.id} className="cursor-pointer">
-                  <input type="checkbox" name="status_ids" value={s.id} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {s.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="status_ids" options={clientStatuses} defaultSelectedIds={new Set()} placeholder="Search statuses..." />
           </div>
 
           <div>

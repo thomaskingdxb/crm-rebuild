@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/Modal';
+import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import ConfirmButton from '@/components/ConfirmButton';
 import { updateActivityModalAction, deleteActivityModalAction } from '@/app/clients/actions';
 import { formatDate } from '@/lib/date';
@@ -62,16 +63,7 @@ export default function ActivityListItem({
 
           <div>
             <span className={labelClass}>Type</span>
-            <div className="flex flex-wrap gap-2">
-              {activityTypes.map((t) => (
-                <label key={t.id} className="cursor-pointer">
-                  <input type="checkbox" name="type_ids" value={t.id} defaultChecked={selectedTypeIds.has(t.id)} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {t.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="type_ids" options={activityTypes} defaultSelectedIds={selectedTypeIds} placeholder="Search types..." />
           </div>
 
           <div>

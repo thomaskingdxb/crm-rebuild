@@ -950,12 +950,12 @@ export default function OffPlanCalculator({
 
         {propertyId && (
           <div className="surface-card p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-medium text-zinc-400">{savedPlanLoaded ? 'Saved plan for this property' : 'No saved plan for this property'}</p>
                 {saveMessage && <p className="mt-1 text-xs text-zinc-500">{saveMessage}</p>}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {savedPlanLoaded && (
                   <button
                     type="button"

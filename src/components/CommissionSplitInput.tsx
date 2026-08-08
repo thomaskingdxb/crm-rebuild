@@ -25,7 +25,7 @@ export default function CommissionSplitInput({
 
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between">
+      <div className="mb-1 flex flex-wrap items-center justify-between gap-1">
         <span className={labelClass}>{label}</span>
         <div className="flex gap-0.5 rounded-lg bg-white/5 p-0.5 ring-1 ring-inset ring-white/10">
           <button

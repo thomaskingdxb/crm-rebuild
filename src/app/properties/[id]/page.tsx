@@ -20,22 +20,6 @@ const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
 const sectionClass = 'surface-card p-6';
-const pillLabelClass = 'cursor-pointer';
-const pillSpanClass =
-  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40';
-
-function PillGroup({ name, options, selectedIds }: { name: string; options: { id: number; name: string }[]; selectedIds: Set<number> }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <label key={o.id} className={pillLabelClass}>
-          <input type="checkbox" name={name} value={o.id} defaultChecked={selectedIds.has(o.id)} className="peer sr-only" />
-          <span className={pillSpanClass}>{o.name}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -72,7 +56,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
       <div className="px-6 py-8">
         <BackLink href="/properties" label="← Back to Properties" />
 
-        <div className="mt-3 flex items-start justify-between">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-100">
               {property.building ?? 'Unnamed building'} {property.unit_number ? `· ${property.unit_number}` : ''}
@@ -91,7 +75,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
               )}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link
               href={`/calculators/roi?property=${property.id}`}
               className="rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:ring-white/20"
@@ -142,12 +126,12 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
 
           <div>
             <span className={labelClass}>Property type</span>
-            <PillGroup name="property_type_ids" options={lookups.propertyTypes} selectedIds={selectedTypeIds} />
+            <SearchableMultiSelect name="property_type_ids" options={lookups.propertyTypes} defaultSelectedIds={selectedTypeIds} placeholder="Search property types..." />
           </div>
 
           <div>
             <span className={labelClass}>Status</span>
-            <PillGroup name="property_status_ids" options={lookups.propertyStatuses} selectedIds={selectedStatusIds} />
+            <SearchableMultiSelect name="property_status_ids" options={lookups.propertyStatuses} defaultSelectedIds={selectedStatusIds} placeholder="Search statuses..." />
           </div>
 
           <div>
@@ -162,17 +146,17 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
 
           <div>
             <span className={labelClass}>Bedrooms</span>
-            <PillGroup name="bedroom_ids" options={lookups.bedroomCounts} selectedIds={selectedBedroomIds} />
+            <SearchableMultiSelect name="bedroom_ids" options={lookups.bedroomCounts} defaultSelectedIds={selectedBedroomIds} placeholder="Search bedrooms..." />
           </div>
 
           <div>
             <span className={labelClass}>Bathrooms</span>
-            <PillGroup name="bathroom_ids" options={lookups.bathroomCounts} selectedIds={selectedBathroomIds} />
+            <SearchableMultiSelect name="bathroom_ids" options={lookups.bathroomCounts} defaultSelectedIds={selectedBathroomIds} placeholder="Search bathrooms..." />
           </div>
 
           <div>
             <span className={labelClass}>View</span>
-            <PillGroup name="view_ids" options={lookups.viewTypes} selectedIds={selectedViewIds} />
+            <SearchableMultiSelect name="view_ids" options={lookups.viewTypes} defaultSelectedIds={selectedViewIds} placeholder="Search views..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

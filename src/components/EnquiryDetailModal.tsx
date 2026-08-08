@@ -19,22 +19,7 @@ import { updateEnquiryModalAction, deleteEnquiryModalAction } from '@/app/enquir
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
-const pillSpanClass =
-  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40';
 const sectionClass = 'rounded-xl bg-white/[0.03] p-4 ring-1 ring-white/5';
-
-function PillGroup({ name, options, selectedIds }: { name: string; options: Lookup[]; selectedIds: Set<number> }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <label key={o.id} className="cursor-pointer">
-          <input type="checkbox" name={name} value={o.id} defaultChecked={selectedIds.has(o.id)} className="peer sr-only" />
-          <span className={pillSpanClass}>{o.name}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 interface EnquiryLookups {
   enquiryTypes: Lookup[];
@@ -157,12 +142,12 @@ export default function EnquiryDetailModal({
 
         <div>
           <span className={labelClass}>Enquiry type</span>
-          <PillGroup name="enquiry_type_ids" options={lookups.enquiryTypes} selectedIds={selectedEnquiryTypeIds} />
+          <SearchableMultiSelect name="enquiry_type_ids" options={lookups.enquiryTypes} defaultSelectedIds={selectedEnquiryTypeIds} placeholder="Search enquiry types..." />
         </div>
 
         <div>
           <span className={labelClass}>Lead stage</span>
-          <PillGroup name="lead_stage_ids" options={lookups.leadStages} selectedIds={selectedLeadStageIds} />
+          <SearchableMultiSelect name="lead_stage_ids" options={lookups.leadStages} defaultSelectedIds={selectedLeadStageIds} placeholder="Search lead stages..." />
         </div>
 
         <div>
@@ -172,12 +157,12 @@ export default function EnquiryDetailModal({
 
         <div>
           <span className={labelClass}>Property type</span>
-          <PillGroup name="property_type_ids" options={lookups.propertyTypes} selectedIds={selectedPropertyTypeIds} />
+          <SearchableMultiSelect name="property_type_ids" options={lookups.propertyTypes} defaultSelectedIds={selectedPropertyTypeIds} placeholder="Search property types..." />
         </div>
 
         <div>
           <span className={labelClass}>Property status</span>
-          <PillGroup name="property_status_ids" options={lookups.propertyStatuses} selectedIds={selectedPropertyStatusIds} />
+          <SearchableMultiSelect name="property_status_ids" options={lookups.propertyStatuses} defaultSelectedIds={selectedPropertyStatusIds} placeholder="Search statuses..." />
         </div>
 
         <div>
@@ -192,17 +177,17 @@ export default function EnquiryDetailModal({
 
         <div>
           <span className={labelClass}>Bedrooms</span>
-          <PillGroup name="bedroom_ids" options={lookups.bedroomCounts} selectedIds={selectedBedroomIds} />
+          <SearchableMultiSelect name="bedroom_ids" options={lookups.bedroomCounts} defaultSelectedIds={selectedBedroomIds} placeholder="Search bedrooms..." />
         </div>
 
         <div>
           <span className={labelClass}>Bathrooms</span>
-          <PillGroup name="bathroom_ids" options={lookups.bathroomCounts} selectedIds={selectedBathroomIds} />
+          <SearchableMultiSelect name="bathroom_ids" options={lookups.bathroomCounts} defaultSelectedIds={selectedBathroomIds} placeholder="Search bathrooms..." />
         </div>
 
         <div>
           <span className={labelClass}>View</span>
-          <PillGroup name="view_ids" options={lookups.viewTypes} selectedIds={selectedViewIds} />
+          <SearchableMultiSelect name="view_ids" options={lookups.viewTypes} defaultSelectedIds={selectedViewIds} placeholder="Search views..." />
         </div>
 
         <div className="grid grid-cols-2 gap-4">

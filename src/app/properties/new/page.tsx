@@ -10,22 +10,6 @@ import BackLink from '@/components/BackLink';
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
-const pillLabelClass = 'cursor-pointer';
-const pillSpanClass =
-  'inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40';
-
-function PillGroup({ name, options }: { name: string; options: { id: number; name: string }[] }) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((o) => (
-        <label key={o.id} className={pillLabelClass}>
-          <input type="checkbox" name={name} value={o.id} className="peer sr-only" />
-          <span className={pillSpanClass}>{o.name}</span>
-        </label>
-      ))}
-    </div>
-  );
-}
 
 export default async function NewPropertyPage({ searchParams }: { searchParams: Promise<{ owner?: string }> }) {
   const { owner } = await searchParams;
@@ -63,12 +47,12 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
 
           <div>
             <span className={labelClass}>Property type</span>
-            <PillGroup name="property_type_ids" options={lookups.propertyTypes} />
+            <SearchableMultiSelect name="property_type_ids" options={lookups.propertyTypes} defaultSelectedIds={new Set()} placeholder="Search property types..." />
           </div>
 
           <div>
             <span className={labelClass}>Status</span>
-            <PillGroup name="property_status_ids" options={lookups.propertyStatuses} />
+            <SearchableMultiSelect name="property_status_ids" options={lookups.propertyStatuses} defaultSelectedIds={new Set()} placeholder="Search statuses..." />
           </div>
 
           <div>
@@ -83,17 +67,17 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
 
           <div>
             <span className={labelClass}>Bedrooms</span>
-            <PillGroup name="bedroom_ids" options={lookups.bedroomCounts} />
+            <SearchableMultiSelect name="bedroom_ids" options={lookups.bedroomCounts} defaultSelectedIds={new Set()} placeholder="Search bedrooms..." />
           </div>
 
           <div>
             <span className={labelClass}>Bathrooms</span>
-            <PillGroup name="bathroom_ids" options={lookups.bathroomCounts} />
+            <SearchableMultiSelect name="bathroom_ids" options={lookups.bathroomCounts} defaultSelectedIds={new Set()} placeholder="Search bathrooms..." />
           </div>
 
           <div>
             <span className={labelClass}>View</span>
-            <PillGroup name="view_ids" options={lookups.viewTypes} />
+            <SearchableMultiSelect name="view_ids" options={lookups.viewTypes} defaultSelectedIds={new Set()} placeholder="Search views..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

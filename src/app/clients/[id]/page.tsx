@@ -18,6 +18,7 @@ import EnquiryCard from '@/components/EnquiryCard';
 import DealCard from '@/components/DealCard';
 import LogActivityButton from '@/components/LogActivityButton';
 import ActivityListItem from '@/components/ActivityListItem';
+import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -58,14 +59,14 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
       <div className="px-6 py-8">
         <BackLink href="/clients" label="← Back to Clients" />
 
-        <div className="mt-3 flex items-start justify-between">
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-zinc-100">{client.name}</h1>
             <p className="text-sm text-zinc-500">
               {client.id} · {days === null ? 'No activity logged' : `${days} day${days === 1 ? '' : 's'} since last activity`}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <LogActivityButton
               clientId={client.id}
               activityTypes={activityTypes}
@@ -105,30 +106,12 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
 
           <div>
             <span className={labelClass}>Type</span>
-            <div className="flex flex-wrap gap-2">
-              {lookups.clientTypes.map((t) => (
-                <label key={t.id} className="cursor-pointer">
-                  <input type="checkbox" name="type_ids" value={t.id} defaultChecked={selectedTypeIds.has(t.id)} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {t.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="type_ids" options={lookups.clientTypes} defaultSelectedIds={selectedTypeIds} placeholder="Search types..." />
           </div>
 
           <div>
             <span className={labelClass}>Status</span>
-            <div className="flex flex-wrap gap-2">
-              {lookups.clientStatuses.map((s) => (
-                <label key={s.id} className="cursor-pointer">
-                  <input type="checkbox" name="status_ids" value={s.id} defaultChecked={selectedStatusIds.has(s.id)} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {s.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="status_ids" options={lookups.clientStatuses} defaultSelectedIds={selectedStatusIds} placeholder="Search statuses..." />
           </div>
 
           <div>

@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
+import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import { createTaskModalAction } from '@/app/tasks/actions';
 import type { Lookup } from '@/types/database';
 
@@ -63,16 +64,7 @@ export default function AddTaskButton({
 
           <div>
             <span className={labelClass}>Type</span>
-            <div className="flex flex-wrap gap-2">
-              {taskTypes.map((t) => (
-                <label key={t.id} className="cursor-pointer">
-                  <input type="checkbox" name="task_type_ids" value={t.id} className="peer sr-only" />
-                  <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-medium text-zinc-400 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 peer-checked:bg-blue-500/20 peer-checked:text-blue-300 peer-checked:ring-blue-500/40">
-                    {t.name}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect name="task_type_ids" options={taskTypes} defaultSelectedIds={new Set()} placeholder="Search types..." />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
