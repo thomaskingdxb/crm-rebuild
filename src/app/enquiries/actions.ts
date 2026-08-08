@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { generateNextEnquiryId } from '@/lib/enquiries';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -11,7 +12,7 @@ function num(v: FormDataEntryValue | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-async function syncMultiSelect(table: string, idColumn: string, lookupColumn: string, entityId: string, ids: number[]) {
+async function syncMultiSelect(supabase: SupabaseClient, table: string, idColumn: string, lookupColumn: string, entityId: string, ids: number[]) {
   const { error: delErr } = await supabase.from(table).delete().eq(idColumn, entityId);
   if (delErr) throw delErr;
   if (ids.length > 0) {
@@ -48,20 +49,21 @@ function readMultiSelectIds(formData: FormData) {
   };
 }
 
-async function syncAllEnquiryLinks(id: string, sel: ReturnType<typeof readMultiSelectIds>) {
-  await syncMultiSelect('enquiry_enquiry_types', 'enquiry_id', 'enquiry_type_id', id, sel.enquiryTypeIds);
-  await syncMultiSelect('enquiry_property_types', 'enquiry_id', 'property_type_id', id, sel.propertyTypeIds);
-  await syncMultiSelect('enquiry_areas', 'enquiry_id', 'area_id', id, sel.areaIds);
-  await syncMultiSelect('enquiry_bedroom_counts', 'enquiry_id', 'bedroom_count_id', id, sel.bedroomIds);
-  await syncMultiSelect('enquiry_bathroom_counts', 'enquiry_id', 'bathroom_count_id', id, sel.bathroomIds);
-  await syncMultiSelect('enquiry_lead_stages', 'enquiry_id', 'lead_stage_id', id, sel.leadStageIds);
-  await syncMultiSelect('enquiry_view_types', 'enquiry_id', 'view_type_id', id, sel.viewIds);
-  await syncMultiSelect('enquiry_developers', 'enquiry_id', 'developer_id', id, sel.developerIds);
-  await syncMultiSelect('enquiry_property_statuses', 'enquiry_id', 'property_status_id', id, sel.propertyStatusIds);
+async function syncAllEnquiryLinks(supabase: SupabaseClient, id: string, sel: ReturnType<typeof readMultiSelectIds>) {
+  await syncMultiSelect(supabase, 'enquiry_enquiry_types', 'enquiry_id', 'enquiry_type_id', id, sel.enquiryTypeIds);
+  await syncMultiSelect(supabase, 'enquiry_property_types', 'enquiry_id', 'property_type_id', id, sel.propertyTypeIds);
+  await syncMultiSelect(supabase, 'enquiry_areas', 'enquiry_id', 'area_id', id, sel.areaIds);
+  await syncMultiSelect(supabase, 'enquiry_bedroom_counts', 'enquiry_id', 'bedroom_count_id', id, sel.bedroomIds);
+  await syncMultiSelect(supabase, 'enquiry_bathroom_counts', 'enquiry_id', 'bathroom_count_id', id, sel.bathroomIds);
+  await syncMultiSelect(supabase, 'enquiry_lead_stages', 'enquiry_id', 'lead_stage_id', id, sel.leadStageIds);
+  await syncMultiSelect(supabase, 'enquiry_view_types', 'enquiry_id', 'view_type_id', id, sel.viewIds);
+  await syncMultiSelect(supabase, 'enquiry_developers', 'enquiry_id', 'developer_id', id, sel.developerIds);
+  await syncMultiSelect(supabase, 'enquiry_property_statuses', 'enquiry_id', 'property_status_id', id, sel.propertyStatusIds);
 }
 
 export async function createEnquiryAction(formData: FormData) {
-  const id = await generateNextEnquiryId();
+  const supabase = await createClient();
+  const id = await generateNextEnquiryId(supabase);
   const fields = readEnquiryForm(formData);
   const sel = readMultiSelectIds(formData);
 
@@ -70,7 +72,7 @@ export async function createEnquiryAction(formData: FormData) {
   const { error } = await supabase.from('enquiries').insert({ id, ...fields });
   if (error) throw error;
 
-  await syncAllEnquiryLinks(id, sel);
+  await syncAllEnquiryLinks(supabase, id, sel);
 
   revalidatePath('/enquiries');
   revalidatePath('/pipeline');
@@ -80,6 +82,7 @@ export async function createEnquiryAction(formData: FormData) {
 // Modal variants — same DB work as createEnquiryAction, but no redirect, so
 // the calling client component can close the modal and refresh in place.
 export async function updateEnquiryModalAction(id: string, formData: FormData) {
+  const supabase = await createClient();
   const fields = readEnquiryForm(formData);
   const sel = readMultiSelectIds(formData);
 
@@ -88,7 +91,7 @@ export async function updateEnquiryModalAction(id: string, formData: FormData) {
   const { error } = await supabase.from('enquiries').update(fields).eq('id', id);
   if (error) throw error;
 
-  await syncAllEnquiryLinks(id, sel);
+  await syncAllEnquiryLinks(supabase, id, sel);
 
   revalidatePath('/enquiries');
   revalidatePath('/pipeline');
@@ -97,6 +100,7 @@ export async function updateEnquiryModalAction(id: string, formData: FormData) {
 }
 
 export async function deleteEnquiryModalAction(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from('enquiries').delete().eq('id', id);
   if (error) throw error;
 

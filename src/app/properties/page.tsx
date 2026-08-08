@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { getProperties, getPropertyLookups } from '@/lib/properties';
+import { createClient } from '@/lib/supabase/server';
 import PropertiesList from '@/components/PropertiesList';
 
 export default async function PropertiesPage() {
-  const [properties, lookups] = await Promise.all([getProperties(), getPropertyLookups()]);
+  const supabase = await createClient();
+  const [properties, lookups] = await Promise.all([getProperties(supabase), getPropertyLookups(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

@@ -2,6 +2,7 @@ import { getDealLookups } from '@/lib/deals';
 import { getClientsBasic } from '@/lib/clients';
 import { getPropertiesBasic } from '@/lib/properties';
 import { createDealAction } from '@/app/deals/actions';
+import { createClient } from '@/lib/supabase/server';
 import SearchableSelect from '@/components/SearchableSelect';
 import DealTypeStageFields from '@/components/DealTypeStageFields';
 import CommissionSplitInput from '@/components/CommissionSplitInput';
@@ -17,7 +18,8 @@ export default async function NewDealPage({
   searchParams: Promise<{ owner?: string; buyer?: string; property?: string }>;
 }) {
   const { owner, buyer, property } = await searchParams;
-  const [lookups, clients, properties] = await Promise.all([getDealLookups(), getClientsBasic(), getPropertiesBasic()]);
+  const supabase = await createClient();
+  const [lookups, clients, properties] = await Promise.all([getDealLookups(supabase), getClientsBasic(supabase), getPropertiesBasic(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

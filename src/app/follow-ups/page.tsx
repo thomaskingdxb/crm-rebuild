@@ -1,4 +1,5 @@
 import { getFollowUpClients, getActivityTypes, getClientLookups } from '@/lib/clients';
+import { createClient } from '@/lib/supabase/server';
 import FollowUpsList from '@/components/FollowUpsList';
 
 function todayStr(): string {
@@ -6,7 +7,8 @@ function todayStr(): string {
 }
 
 export default async function FollowUpsPage() {
-  const [allFollowUps, activityTypes, clientLookups] = await Promise.all([getFollowUpClients(), getActivityTypes(), getClientLookups()]);
+  const supabase = await createClient();
+  const [allFollowUps, activityTypes, clientLookups] = await Promise.all([getFollowUpClients(supabase), getActivityTypes(supabase), getClientLookups(supabase)]);
 
   const today = todayStr();
   const clients = allFollowUps.filter((c) => c.follow_up_date! <= today);

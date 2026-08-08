@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { getClients, getClientLookups, getActivityTypes } from '@/lib/clients';
+import { createClient } from '@/lib/supabase/server';
 import ClientsList from '@/components/ClientsList';
 
 export default async function ClientsPage() {
-  const [clients, lookups, activityTypes] = await Promise.all([getClients(), getClientLookups(), getActivityTypes()]);
+  const supabase = await createClient();
+  const [clients, lookups, activityTypes] = await Promise.all([getClients(supabase), getClientLookups(supabase), getActivityTypes(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

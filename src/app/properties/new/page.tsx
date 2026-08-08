@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getPropertyLookups } from '@/lib/properties';
 import { getClientsBasic } from '@/lib/clients';
 import { createPropertyAction } from '@/app/properties/actions';
+import { createClient } from '@/lib/supabase/server';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import BackLink from '@/components/BackLink';
@@ -28,7 +29,8 @@ function PillGroup({ name, options }: { name: string; options: { id: number; nam
 
 export default async function NewPropertyPage({ searchParams }: { searchParams: Promise<{ owner?: string }> }) {
   const { owner } = await searchParams;
-  const [lookups, clients] = await Promise.all([getPropertyLookups(), getClientsBasic()]);
+  const supabase = await createClient();
+  const [lookups, clients] = await Promise.all([getPropertyLookups(supabase), getClientsBasic(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

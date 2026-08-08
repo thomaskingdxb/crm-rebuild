@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultClient } from '@/lib/supabase/client';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
 
 const PROPERTY_SELECT = `*,
@@ -11,8 +12,10 @@ const PROPERTY_SELECT = `*,
   property_view_types ( view_types ( id, name, display_order ) ),
   clients ( id, name )`;
 
-export async function getPropertiesBasic(): Promise<{ id: string; building: string | null; unit_number: string | null }[]> {
-  const { data, error } = await supabase.from('properties').select('id, building, unit_number').order('id');
+export async function getPropertiesBasic(
+  db: SupabaseClient = defaultClient
+): Promise<{ id: string; building: string | null; unit_number: string | null }[]> {
+  const { data, error } = await db.from('properties').select('id, building, unit_number').order('id');
   if (error) throw error;
   return data;
 }
@@ -34,14 +37,14 @@ function sortProperties(properties: PropertyWithRelations[]): PropertyWithRelati
   });
 }
 
-export async function getProperties(): Promise<PropertyWithRelations[]> {
-  const { data, error } = await supabase.from('properties').select(PROPERTY_SELECT);
+export async function getProperties(db: SupabaseClient = defaultClient): Promise<PropertyWithRelations[]> {
+  const { data, error } = await db.from('properties').select(PROPERTY_SELECT);
   if (error) throw error;
   return sortProperties(data as unknown as PropertyWithRelations[]);
 }
 
-export async function getProperty(id: string): Promise<PropertyWithRelations | null> {
-  const { data, error } = await supabase.from('properties').select(PROPERTY_SELECT).eq('id', id).single();
+export async function getProperty(id: string, db: SupabaseClient = defaultClient): Promise<PropertyWithRelations | null> {
+  const { data, error } = await db.from('properties').select(PROPERTY_SELECT).eq('id', id).single();
   if (error) {
     if (error.code === 'PGRST116') return null;
     throw error;
@@ -49,8 +52,8 @@ export async function getProperty(id: string): Promise<PropertyWithRelations | n
   return data as unknown as PropertyWithRelations;
 }
 
-export async function getClientProperties(clientId: string): Promise<PropertyWithRelations[]> {
-  const { data, error } = await supabase
+export async function getClientProperties(clientId: string, db: SupabaseClient = defaultClient): Promise<PropertyWithRelations[]> {
+  const { data, error } = await db
     .from('properties')
     .select(PROPERTY_SELECT)
     .eq('owner_id', clientId)
@@ -60,15 +63,15 @@ export async function getClientProperties(clientId: string): Promise<PropertyWit
   return data as unknown as PropertyWithRelations[];
 }
 
-export async function getPropertyLookups() {
+export async function getPropertyLookups(db: SupabaseClient = defaultClient) {
   const [types, statuses, areas, bedrooms, bathrooms, developers, views] = await Promise.all([
-    supabase.from('property_types').select('*').order('display_order'),
-    supabase.from('property_statuses').select('*').order('display_order'),
-    supabase.from('areas').select('*').order('display_order'),
-    supabase.from('bedroom_counts').select('*').order('display_order'),
-    supabase.from('bathroom_counts').select('*').order('display_order'),
-    supabase.from('developers').select('*').order('display_order'),
-    supabase.from('view_types').select('*').order('display_order'),
+    db.from('property_types').select('*').order('display_order'),
+    db.from('property_statuses').select('*').order('display_order'),
+    db.from('areas').select('*').order('display_order'),
+    db.from('bedroom_counts').select('*').order('display_order'),
+    db.from('bathroom_counts').select('*').order('display_order'),
+    db.from('developers').select('*').order('display_order'),
+    db.from('view_types').select('*').order('display_order'),
   ]);
 
   for (const r of [types, statuses, areas, bedrooms, bathrooms, developers, views]) {
@@ -86,8 +89,8 @@ export async function getPropertyLookups() {
   };
 }
 
-export async function generateNextPropertyId(): Promise<string> {
-  const { data, error } = await supabase.from('properties').select('id');
+export async function generateNextPropertyId(db: SupabaseClient = defaultClient): Promise<string> {
+  const { data, error } = await db.from('properties').select('id');
   if (error) throw error;
 
   let max = 0;

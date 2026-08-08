@@ -1,11 +1,12 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import { createClient } from '@/lib/supabase/server';
 import { generateNextClientId, generateNextActivityId } from '@/lib/clients';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 export async function createClientAction(formData: FormData) {
+  const supabase = await createClient();
   const name = formData.get('name') as string;
   const phone = (formData.get('phone') as string) || null;
   const email = (formData.get('email') as string) || null;
@@ -19,7 +20,7 @@ export async function createClientAction(formData: FormData) {
 
   if (!name) throw new Error('Name is required');
 
-  const id = await generateNextClientId();
+  const id = await generateNextClientId(supabase);
 
   const { error: clientError } = await supabase.from('clients').insert({
     id,
@@ -54,6 +55,7 @@ export async function createClientAction(formData: FormData) {
 }
 
 export async function updateClientAction(id: string, formData: FormData) {
+  const supabase = await createClient();
   const name = formData.get('name') as string;
   const phone = (formData.get('phone') as string) || null;
   const email = (formData.get('email') as string) || null;
@@ -112,11 +114,12 @@ export async function updateClientAction(id: string, formData: FormData) {
 // so the calling client component can close the modal and refresh in place.
 
 export async function logActivityModalAction(clientId: string, formData: FormData) {
+  const supabase = await createClient();
   const activityDate = (formData.get('activity_date') as string) || new Date().toISOString().slice(0, 10);
   const notes = (formData.get('notes') as string) || null;
   const typeIds = formData.getAll('type_ids').map(Number);
 
-  const id = await generateNextActivityId();
+  const id = await generateNextActivityId(supabase);
 
   const { error } = await supabase.from('activities').insert({
     id,
@@ -138,6 +141,7 @@ export async function logActivityModalAction(clientId: string, formData: FormDat
 }
 
 export async function updateActivityModalAction(clientId: string, activityId: string, formData: FormData) {
+  const supabase = await createClient();
   const activityDate = (formData.get('activity_date') as string) || null;
   const notes = (formData.get('notes') as string) || null;
   const typeIds = formData.getAll('type_ids').map(Number);
@@ -161,6 +165,7 @@ export async function updateActivityModalAction(clientId: string, activityId: st
 }
 
 export async function deleteActivityModalAction(clientId: string, activityId: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from('activities').delete().eq('id', activityId);
   if (error) throw error;
 
@@ -168,6 +173,7 @@ export async function deleteActivityModalAction(clientId: string, activityId: st
 }
 
 export async function deleteClientAction(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from('clients').delete().eq('id', id);
   if (error) throw error;
 

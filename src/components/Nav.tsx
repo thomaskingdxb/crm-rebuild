@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/', available: true },
@@ -19,6 +20,14 @@ const NAV_ITEMS = [
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setOpen(false);
+    router.push('/login');
+    router.refresh();
+  }
 
   return (
     <>
@@ -80,6 +89,14 @@ export default function Nav() {
                 </Link>
               );
             })}
+
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="mt-2 rounded-lg px-3 py-2 text-left text-sm font-medium text-zinc-500 transition hover:bg-white/5 hover:text-rose-400"
+            >
+              Sign out
+            </button>
           </nav>
         </div>
       )}

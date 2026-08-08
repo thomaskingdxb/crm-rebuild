@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { getClientLookups } from '@/lib/clients';
 import { createClientAction } from '@/app/clients/actions';
+import { createClient } from '@/lib/supabase/server';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
 
 export default async function NewClientPage() {
-  const { clientTypes, clientStatuses, leadSources } = await getClientLookups();
+  const supabase = await createClient();
+  const { clientTypes, clientStatuses, leadSources } = await getClientLookups(supabase);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

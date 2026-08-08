@@ -1,4 +1,5 @@
 import { getPropertiesBasic } from '@/lib/properties';
+import { createClient } from '@/lib/supabase/server';
 import ROICalculator from '@/components/ROICalculator';
 import BackLink from '@/components/BackLink';
 
@@ -7,7 +8,8 @@ export default async function ROICalculatorPage({
 }: {
   searchParams: Promise<{ property?: string }>;
 }) {
-  const [{ property }, properties] = await Promise.all([searchParams, getPropertiesBasic()]);
+  const supabase = await createClient();
+  const [{ property }, properties] = await Promise.all([searchParams, getPropertiesBasic(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

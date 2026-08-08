@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { generateNextTaskId } from '@/lib/tasks';
 import { revalidatePath } from 'next/cache';
 
@@ -10,7 +11,7 @@ function num(v: FormDataEntryValue | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-async function syncTaskTypes(taskId: string, typeIds: number[]) {
+async function syncTaskTypes(supabase: SupabaseClient, taskId: string, typeIds: number[]) {
   const { error: delErr } = await supabase.from('task_task_types').delete().eq('task_id', taskId);
   if (delErr) throw delErr;
   if (typeIds.length > 0) {
@@ -32,7 +33,8 @@ function readTaskForm(formData: FormData) {
 }
 
 export async function createTaskModalAction(formData: FormData) {
-  const id = await generateNextTaskId();
+  const supabase = await createClient();
+  const id = await generateNextTaskId(supabase);
   const fields = readTaskForm(formData);
   const typeIds = formData.getAll('task_type_ids').map(Number);
 
@@ -41,13 +43,14 @@ export async function createTaskModalAction(formData: FormData) {
   const { error } = await supabase.from('tasks').insert({ id, ...fields });
   if (error) throw error;
 
-  await syncTaskTypes(id, typeIds);
+  await syncTaskTypes(supabase, id, typeIds);
 
   revalidatePath('/tasks');
   revalidatePath(`/clients/${fields.client_id}`);
 }
 
 export async function updateTaskModalAction(id: string, formData: FormData) {
+  const supabase = await createClient();
   const fields = readTaskForm(formData);
   const typeIds = formData.getAll('task_type_ids').map(Number);
 
@@ -56,13 +59,14 @@ export async function updateTaskModalAction(id: string, formData: FormData) {
   const { error } = await supabase.from('tasks').update(fields).eq('id', id);
   if (error) throw error;
 
-  await syncTaskTypes(id, typeIds);
+  await syncTaskTypes(supabase, id, typeIds);
 
   revalidatePath('/tasks');
   revalidatePath(`/clients/${fields.client_id}`);
 }
 
 export async function deleteTaskModalAction(id: string, clientId: string | null) {
+  const supabase = await createClient();
   const { error } = await supabase.from('tasks').delete().eq('id', id);
   if (error) throw error;
 

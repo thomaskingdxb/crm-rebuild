@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultClient } from '@/lib/supabase/client';
 import type { ClientWithRelations, ClientListItem, Lookup, ActivityWithRelations } from '@/types/database';
 
 const CLIENT_SELECT = `*,
@@ -12,16 +13,16 @@ function mostRecentDate(a: string | null, b: string | null): string | null {
   return a > b ? a : b;
 }
 
-export async function getClientsBasic(): Promise<{ id: string; name: string }[]> {
-  const { data, error } = await supabase.from('clients').select('id, name').order('name');
+export async function getClientsBasic(db: SupabaseClient = defaultClient): Promise<{ id: string; name: string }[]> {
+  const { data, error } = await db.from('clients').select('id, name').order('name');
   if (error) throw error;
   return data;
 }
 
-export async function getClients(): Promise<ClientListItem[]> {
+export async function getClients(db: SupabaseClient = defaultClient): Promise<ClientListItem[]> {
   const [clientsRes, activitiesRes] = await Promise.all([
-    supabase.from('clients').select(CLIENT_SELECT).order('name'),
-    supabase.from('activities').select('client_id, activity_date'),
+    db.from('clients').select(CLIENT_SELECT).order('name'),
+    db.from('activities').select('client_id, activity_date'),
   ]);
 
   if (clientsRes.error) throw clientsRes.error;
@@ -43,17 +44,17 @@ export async function getClients(): Promise<ClientListItem[]> {
   }));
 }
 
-export async function getFollowUpClients(): Promise<ClientListItem[]> {
-  const clients = await getClients();
+export async function getFollowUpClients(db: SupabaseClient = defaultClient): Promise<ClientListItem[]> {
+  const clients = await getClients(db);
   return clients
     .filter((c) => c.follow_up_date)
     .sort((a, b) => (a.follow_up_date! < b.follow_up_date! ? -1 : a.follow_up_date! > b.follow_up_date! ? 1 : 0));
 }
 
-export async function getClient(id: string): Promise<ClientListItem | null> {
+export async function getClient(id: string, db: SupabaseClient = defaultClient): Promise<ClientListItem | null> {
   const [clientRes, activitiesRes] = await Promise.all([
-    supabase.from('clients').select(CLIENT_SELECT).eq('id', id).single(),
-    supabase.from('activities').select('client_id, activity_date').eq('client_id', id),
+    db.from('clients').select(CLIENT_SELECT).eq('id', id).single(),
+    db.from('activities').select('client_id, activity_date').eq('client_id', id),
   ]);
 
   if (clientRes.error) {
@@ -73,8 +74,8 @@ export async function getClient(id: string): Promise<ClientListItem | null> {
   };
 }
 
-export async function getClientActivities(clientId: string): Promise<ActivityWithRelations[]> {
-  const { data, error } = await supabase
+export async function getClientActivities(clientId: string, db: SupabaseClient = defaultClient): Promise<ActivityWithRelations[]> {
+  const { data, error } = await db
     .from('activities')
     .select('*, activity_activity_types ( activity_types ( id, name, display_order ) )')
     .eq('client_id', clientId)
@@ -84,11 +85,11 @@ export async function getClientActivities(clientId: string): Promise<ActivityWit
   return data as unknown as ActivityWithRelations[];
 }
 
-export async function getClientLookups() {
+export async function getClientLookups(db: SupabaseClient = defaultClient) {
   const [types, statuses, sources] = await Promise.all([
-    supabase.from('client_types').select('*').order('display_order'),
-    supabase.from('client_statuses').select('*').order('display_order'),
-    supabase.from('lead_sources').select('*').order('display_order'),
+    db.from('client_types').select('*').order('display_order'),
+    db.from('client_statuses').select('*').order('display_order'),
+    db.from('lead_sources').select('*').order('display_order'),
   ]);
 
   if (types.error) throw types.error;
@@ -102,8 +103,8 @@ export async function getClientLookups() {
   };
 }
 
-async function generateNextId(table: string, prefix: string): Promise<string> {
-  const { data, error } = await supabase.from(table).select('id');
+async function generateNextId(table: string, prefix: string, db: SupabaseClient = defaultClient): Promise<string> {
+  const { data, error } = await db.from(table).select('id');
   if (error) throw error;
 
   let max = 0;
@@ -114,16 +115,16 @@ async function generateNextId(table: string, prefix: string): Promise<string> {
   return `${prefix}${String(max + 1).padStart(3, '0')}`;
 }
 
-export async function generateNextClientId(): Promise<string> {
-  return generateNextId('clients', 'C');
+export async function generateNextClientId(db: SupabaseClient = defaultClient): Promise<string> {
+  return generateNextId('clients', 'C', db);
 }
 
-export async function generateNextActivityId(): Promise<string> {
-  return generateNextId('activities', 'AL');
+export async function generateNextActivityId(db: SupabaseClient = defaultClient): Promise<string> {
+  return generateNextId('activities', 'AL', db);
 }
 
-export async function getActivityTypes(): Promise<Lookup[]> {
-  const { data, error } = await supabase.from('activity_types').select('*').order('display_order');
+export async function getActivityTypes(db: SupabaseClient = defaultClient): Promise<Lookup[]> {
+  const { data, error } = await db.from('activity_types').select('*').order('display_order');
   if (error) throw error;
   return data as Lookup[];
 }

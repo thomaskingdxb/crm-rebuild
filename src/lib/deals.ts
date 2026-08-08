@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultClient } from '@/lib/supabase/client';
 import type { DealWithRelations, DealForClient, DealStage, Lookup } from '@/types/database';
 
 const DEAL_SELECT = `*,
@@ -8,14 +9,14 @@ const DEAL_SELECT = `*,
   owner:clients!owner_id ( id, name ),
   buyer:clients!buyer_id ( id, name )`;
 
-export async function getDeals(): Promise<DealWithRelations[]> {
-  const { data, error } = await supabase.from('deals').select(DEAL_SELECT).order('date_agreed', { ascending: false });
+export async function getDeals(db: SupabaseClient = defaultClient): Promise<DealWithRelations[]> {
+  const { data, error } = await db.from('deals').select(DEAL_SELECT).order('date_agreed', { ascending: false });
   if (error) throw error;
   return data as unknown as DealWithRelations[];
 }
 
-export async function getDeal(id: string): Promise<DealWithRelations | null> {
-  const { data, error } = await supabase.from('deals').select(DEAL_SELECT).eq('id', id).single();
+export async function getDeal(id: string, db: SupabaseClient = defaultClient): Promise<DealWithRelations | null> {
+  const { data, error } = await db.from('deals').select(DEAL_SELECT).eq('id', id).single();
   if (error) {
     if (error.code === 'PGRST116') return null;
     throw error;
@@ -23,8 +24,8 @@ export async function getDeal(id: string): Promise<DealWithRelations | null> {
   return data as unknown as DealWithRelations;
 }
 
-export async function getClientDeals(clientId: string): Promise<DealForClient[]> {
-  const { data, error } = await supabase
+export async function getClientDeals(clientId: string, db: SupabaseClient = defaultClient): Promise<DealForClient[]> {
+  const { data, error } = await db
     .from('deals')
     .select(DEAL_SELECT)
     .or(`owner_id.eq.${clientId},buyer_id.eq.${clientId}`)
@@ -39,8 +40,8 @@ export async function getClientDeals(clientId: string): Promise<DealForClient[]>
   }));
 }
 
-export async function getPropertyDeals(propertyId: string): Promise<DealWithRelations[]> {
-  const { data, error } = await supabase
+export async function getPropertyDeals(propertyId: string, db: SupabaseClient = defaultClient): Promise<DealWithRelations[]> {
+  const { data, error } = await db
     .from('deals')
     .select(DEAL_SELECT)
     .eq('property_id', propertyId)
@@ -50,10 +51,10 @@ export async function getPropertyDeals(propertyId: string): Promise<DealWithRela
   return data as unknown as DealWithRelations[];
 }
 
-export async function getDealLookups() {
+export async function getDealLookups(db: SupabaseClient = defaultClient) {
   const [dealTypes, dealStages] = await Promise.all([
-    supabase.from('deal_types').select('*').order('display_order'),
-    supabase.from('deal_stages').select('*').order('display_order'),
+    db.from('deal_types').select('*').order('display_order'),
+    db.from('deal_stages').select('*').order('display_order'),
   ]);
 
   if (dealTypes.error) throw dealTypes.error;
@@ -69,8 +70,8 @@ export async function getDealLookups() {
   };
 }
 
-export async function generateNextDealId(): Promise<string> {
-  const { data, error } = await supabase.from('deals').select('id');
+export async function generateNextDealId(db: SupabaseClient = defaultClient): Promise<string> {
+  const { data, error } = await db.from('deals').select('id');
   if (error) throw error;
 
   let max = 0;

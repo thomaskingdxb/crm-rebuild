@@ -2,16 +2,18 @@ import { getEnquiries, getEnquiryLookups, CLOSED_LEAD_STAGE_NAMES } from '@/lib/
 import { getClientsBasic, getActivityTypes } from '@/lib/clients';
 import { getPropertiesBasic } from '@/lib/properties';
 import { getTaskTypes } from '@/lib/tasks';
+import { createClient } from '@/lib/supabase/server';
 import PipelineKanban from '@/components/PipelineKanban';
 
 export default async function PipelinePage() {
+  const supabase = await createClient();
   const [enquiries, lookups, clients, properties, taskTypes, activityTypes] = await Promise.all([
-    getEnquiries(),
-    getEnquiryLookups(),
-    getClientsBasic(),
-    getPropertiesBasic(),
-    getTaskTypes(),
-    getActivityTypes(),
+    getEnquiries(supabase),
+    getEnquiryLookups(supabase),
+    getClientsBasic(supabase),
+    getPropertiesBasic(supabase),
+    getTaskTypes(supabase),
+    getActivityTypes(supabase),
   ]);
 
   const activeStages = lookups.leadStages.filter((s) => !CLOSED_LEAD_STAGE_NAMES.includes(s.name));

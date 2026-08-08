@@ -6,6 +6,7 @@ import { getClientEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getClientProperties, getPropertiesBasic } from '@/lib/properties';
 import { getClientDeals, getDealLookups } from '@/lib/deals';
 import { updateClientAction, deleteClientAction } from '@/app/clients/actions';
+import { createClient } from '@/lib/supabase/server';
 import { daysSince } from '@/lib/date';
 import { telHref, whatsappHref } from '@/lib/phone';
 import DeleteClientButton from '@/components/DeleteClientButton';
@@ -25,20 +26,21 @@ const sectionClass = 'surface-card p-6';
 
 export default async function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const supabase = await createClient();
   const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties, enquiryLookups] = await Promise.all([
-    getClient(id),
-    getClientLookups(),
-    getClientActivities(id),
-    getActivityTypes(),
-    getClientTasks(id),
-    getTaskTypes(),
-    getClientsBasic(),
-    getClientEnquiries(id),
-    getClientProperties(id),
-    getClientDeals(id),
-    getDealLookups(),
-    getPropertiesBasic(),
-    getEnquiryLookups(),
+    getClient(id, supabase),
+    getClientLookups(supabase),
+    getClientActivities(id, supabase),
+    getActivityTypes(supabase),
+    getClientTasks(id, supabase),
+    getTaskTypes(supabase),
+    getClientsBasic(supabase),
+    getClientEnquiries(id, supabase),
+    getClientProperties(id, supabase),
+    getClientDeals(id, supabase),
+    getDealLookups(supabase),
+    getPropertiesBasic(supabase),
+    getEnquiryLookups(supabase),
   ]);
 
   if (!client) notFound();

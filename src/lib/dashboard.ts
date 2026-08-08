@@ -1,4 +1,5 @@
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { supabase as defaultClient } from '@/lib/supabase/client';
 import { getEnquiries, CLOSED_LEAD_STAGE_NAMES } from '@/lib/enquiries';
 import { getDeals, computeDealStats } from '@/lib/deals';
 import { getTasks } from '@/lib/tasks';
@@ -16,18 +17,18 @@ export interface DashboardStats {
   dealStats: DealStats;
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(db: SupabaseClient = defaultClient): Promise<DashboardStats> {
   const today = new Date().toISOString().slice(0, 10);
 
   const [clientsRes, statusLinksRes, followUpsTodayRes, followUpsOverdueRes, propertiesRes, enquiries, deals, tasks] = await Promise.all([
-    supabase.from('clients').select('id', { count: 'exact', head: true }),
-    supabase.from('client_client_statuses').select('client_statuses ( name )'),
-    supabase.from('clients').select('id', { count: 'exact', head: true }).eq('follow_up_date', today),
-    supabase.from('clients').select('id', { count: 'exact', head: true }).lt('follow_up_date', today),
-    supabase.from('properties').select('id', { count: 'exact', head: true }),
-    getEnquiries(),
-    getDeals(),
-    getTasks(),
+    db.from('clients').select('id', { count: 'exact', head: true }),
+    db.from('client_client_statuses').select('client_statuses ( name )'),
+    db.from('clients').select('id', { count: 'exact', head: true }).eq('follow_up_date', today),
+    db.from('clients').select('id', { count: 'exact', head: true }).lt('follow_up_date', today),
+    db.from('properties').select('id', { count: 'exact', head: true }),
+    getEnquiries(db),
+    getDeals(db),
+    getTasks(db),
   ]);
 
   if (clientsRes.error) throw clientsRes.error;

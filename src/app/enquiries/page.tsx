@@ -3,16 +3,18 @@ import { getEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getClientsBasic, getActivityTypes } from '@/lib/clients';
 import { getPropertiesBasic } from '@/lib/properties';
 import { getTaskTypes } from '@/lib/tasks';
+import { createClient } from '@/lib/supabase/server';
 import EnquiriesList from '@/components/EnquiriesList';
 
 export default async function EnquiriesPage() {
+  const supabase = await createClient();
   const [enquiries, lookups, clients, properties, taskTypes, activityTypes] = await Promise.all([
-    getEnquiries(),
-    getEnquiryLookups(),
-    getClientsBasic(),
-    getPropertiesBasic(),
-    getTaskTypes(),
-    getActivityTypes(),
+    getEnquiries(supabase),
+    getEnquiryLookups(supabase),
+    getClientsBasic(supabase),
+    getPropertiesBasic(supabase),
+    getTaskTypes(supabase),
+    getActivityTypes(supabase),
   ]);
 
   return (

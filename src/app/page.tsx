@@ -1,6 +1,7 @@
 import type React from 'react';
 import Link from 'next/link';
 import { getDashboardStats } from '@/lib/dashboard';
+import { createClient } from '@/lib/supabase/server';
 
 const STATUS_COLORS: Record<string, string> = {
   Ongoing: 'text-emerald-400',
@@ -250,7 +251,8 @@ function dubaiDate(): string {
 }
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const supabase = await createClient();
+  const stats = await getDashboardStats(supabase);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

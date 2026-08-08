@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { generateNextDealId } from '@/lib/deals';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -16,7 +17,7 @@ function pct(v: FormDataEntryValue | null): number | null {
   return n === null ? null : n / 100;
 }
 
-async function defaultStageId(dealTypeId: number | null): Promise<number | null> {
+async function defaultStageId(supabase: SupabaseClient, dealTypeId: number | null): Promise<number | null> {
   if (dealTypeId == null) return null;
   const category = dealTypeId === 1 ? 'rental' : 'sale';
   const { data, error } = await supabase.from('deal_stages').select('id').eq('category', category).eq('name', 'Unstaged').single();
@@ -43,11 +44,12 @@ function readDealForm(formData: FormData) {
 }
 
 export async function createDealAction(formData: FormData) {
-  const id = await generateNextDealId();
+  const supabase = await createClient();
+  const id = await generateNextDealId(supabase);
   const fields = readDealForm(formData);
 
   if (fields.deal_stage_id == null) {
-    fields.deal_stage_id = await defaultStageId(fields.deal_type_id);
+    fields.deal_stage_id = await defaultStageId(supabase, fields.deal_type_id);
   }
 
   const { error } = await supabase.from('deals').insert({ id, ...fields });
@@ -60,10 +62,11 @@ export async function createDealAction(formData: FormData) {
 // Modal variant — same DB work as createDealAction, but no redirect, so the
 // calling client component can close the modal and refresh in place.
 export async function updateDealModalAction(id: string, formData: FormData) {
+  const supabase = await createClient();
   const fields = readDealForm(formData);
 
   if (fields.deal_stage_id == null) {
-    fields.deal_stage_id = await defaultStageId(fields.deal_type_id);
+    fields.deal_stage_id = await defaultStageId(supabase, fields.deal_type_id);
   }
 
   const { error } = await supabase.from('deals').update(fields).eq('id', id);
@@ -76,6 +79,7 @@ export async function updateDealModalAction(id: string, formData: FormData) {
 }
 
 export async function deleteDealModalAction(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from('deals').delete().eq('id', id);
   if (error) throw error;
 
@@ -86,6 +90,7 @@ export async function deleteDealModalAction(id: string) {
 // Moving into MOU signed / Contract signed stamps date_agreed; moving into
 // Completed stamps date_completed — both set to today.
 export async function moveDealStageAction(dealId: string, newStageId: number) {
+  const supabase = await createClient();
   const { data: stage, error: stageError } = await supabase.from('deal_stages').select('name').eq('id', newStageId).single();
   if (stageError) throw stageError;
 

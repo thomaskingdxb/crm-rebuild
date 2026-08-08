@@ -7,6 +7,7 @@ import { getPropertyDeals, getDealLookups } from '@/lib/deals';
 import { getTaskTypes } from '@/lib/tasks';
 import { updatePropertyAction, deletePropertyAction } from '@/app/properties/actions';
 import { getSavedCalculatorSummary } from '@/lib/calculatorPersistence';
+import { createClient } from '@/lib/supabase/server';
 import DeleteButton from '@/components/DeleteButton';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
@@ -38,18 +39,19 @@ function PillGroup({ name, options, selectedIds }: { name: string; options: { id
 
 export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const supabase = await createClient();
   const [property, lookups, clients, enquiries, deals, dealLookups, allProperties, enquiryLookups, taskTypes, activityTypes, calculatorSummary] = await Promise.all([
-    getProperty(id),
-    getPropertyLookups(),
-    getClientsBasic(),
-    getPropertyEnquiries(id),
-    getPropertyDeals(id),
-    getDealLookups(),
-    getPropertiesBasic(),
-    getEnquiryLookups(),
-    getTaskTypes(),
-    getActivityTypes(),
-    getSavedCalculatorSummary(id),
+    getProperty(id, supabase),
+    getPropertyLookups(supabase),
+    getClientsBasic(supabase),
+    getPropertyEnquiries(id, supabase),
+    getPropertyDeals(id, supabase),
+    getDealLookups(supabase),
+    getPropertiesBasic(supabase),
+    getEnquiryLookups(supabase),
+    getTaskTypes(supabase),
+    getActivityTypes(supabase),
+    getSavedCalculatorSummary(id, supabase),
   ]);
 
   if (!property) notFound();

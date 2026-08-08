@@ -3,6 +3,7 @@ import { getEnquiryLookups } from '@/lib/enquiries';
 import { getClientsBasic } from '@/lib/clients';
 import { getPropertiesBasic } from '@/lib/properties';
 import { createEnquiryAction } from '@/app/enquiries/actions';
+import { createClient } from '@/lib/supabase/server';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import BackLink from '@/components/BackLink';
@@ -28,7 +29,8 @@ function PillGroup({ name, options }: { name: string; options: { id: number; nam
 
 export default async function NewEnquiryPage({ searchParams }: { searchParams: Promise<{ client?: string; property?: string }> }) {
   const { client, property } = await searchParams;
-  const [lookups, clients, properties] = await Promise.all([getEnquiryLookups(), getClientsBasic(), getPropertiesBasic()]);
+  const supabase = await createClient();
+  const [lookups, clients, properties] = await Promise.all([getEnquiryLookups(supabase), getClientsBasic(supabase), getPropertiesBasic(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

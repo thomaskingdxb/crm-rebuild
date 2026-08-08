@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 import { generateNextPropertyId } from '@/lib/properties';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -11,7 +12,7 @@ function num(v: FormDataEntryValue | null): number | null {
   return isNaN(n) ? null : n;
 }
 
-async function syncMultiSelect(table: string, idColumn: string, lookupColumn: string, entityId: string, ids: number[]) {
+async function syncMultiSelect(supabase: SupabaseClient, table: string, idColumn: string, lookupColumn: string, entityId: string, ids: number[]) {
   const { error: delErr } = await supabase.from(table).delete().eq(idColumn, entityId);
   if (delErr) throw delErr;
   if (ids.length > 0) {
@@ -50,39 +51,41 @@ function readMultiSelectIds(formData: FormData) {
 }
 
 export async function createPropertyAction(formData: FormData) {
-  const id = await generateNextPropertyId();
+  const supabase = await createClient();
+  const id = await generateNextPropertyId(supabase);
   const fields = readPropertyForm(formData);
   const sel = readMultiSelectIds(formData);
 
   const { error } = await supabase.from('properties').insert({ id, ...fields });
   if (error) throw error;
 
-  await syncMultiSelect('property_property_types', 'property_id', 'property_type_id', id, sel.typeIds);
-  await syncMultiSelect('property_property_statuses', 'property_id', 'property_status_id', id, sel.statusIds);
-  await syncMultiSelect('property_areas', 'property_id', 'area_id', id, sel.areaIds);
-  await syncMultiSelect('property_bedroom_counts', 'property_id', 'bedroom_count_id', id, sel.bedroomIds);
-  await syncMultiSelect('property_bathroom_counts', 'property_id', 'bathroom_count_id', id, sel.bathroomIds);
-  await syncMultiSelect('property_developers', 'property_id', 'developer_id', id, sel.developerIds);
-  await syncMultiSelect('property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
+  await syncMultiSelect(supabase, 'property_property_types', 'property_id', 'property_type_id', id, sel.typeIds);
+  await syncMultiSelect(supabase, 'property_property_statuses', 'property_id', 'property_status_id', id, sel.statusIds);
+  await syncMultiSelect(supabase, 'property_areas', 'property_id', 'area_id', id, sel.areaIds);
+  await syncMultiSelect(supabase, 'property_bedroom_counts', 'property_id', 'bedroom_count_id', id, sel.bedroomIds);
+  await syncMultiSelect(supabase, 'property_bathroom_counts', 'property_id', 'bathroom_count_id', id, sel.bathroomIds);
+  await syncMultiSelect(supabase, 'property_developers', 'property_id', 'developer_id', id, sel.developerIds);
+  await syncMultiSelect(supabase, 'property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
 
   revalidatePath('/properties');
   redirect(`/properties/${id}`);
 }
 
 export async function updatePropertyAction(id: string, formData: FormData) {
+  const supabase = await createClient();
   const fields = readPropertyForm(formData);
   const sel = readMultiSelectIds(formData);
 
   const { error } = await supabase.from('properties').update(fields).eq('id', id);
   if (error) throw error;
 
-  await syncMultiSelect('property_property_types', 'property_id', 'property_type_id', id, sel.typeIds);
-  await syncMultiSelect('property_property_statuses', 'property_id', 'property_status_id', id, sel.statusIds);
-  await syncMultiSelect('property_areas', 'property_id', 'area_id', id, sel.areaIds);
-  await syncMultiSelect('property_bedroom_counts', 'property_id', 'bedroom_count_id', id, sel.bedroomIds);
-  await syncMultiSelect('property_bathroom_counts', 'property_id', 'bathroom_count_id', id, sel.bathroomIds);
-  await syncMultiSelect('property_developers', 'property_id', 'developer_id', id, sel.developerIds);
-  await syncMultiSelect('property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
+  await syncMultiSelect(supabase, 'property_property_types', 'property_id', 'property_type_id', id, sel.typeIds);
+  await syncMultiSelect(supabase, 'property_property_statuses', 'property_id', 'property_status_id', id, sel.statusIds);
+  await syncMultiSelect(supabase, 'property_areas', 'property_id', 'area_id', id, sel.areaIds);
+  await syncMultiSelect(supabase, 'property_bedroom_counts', 'property_id', 'bedroom_count_id', id, sel.bedroomIds);
+  await syncMultiSelect(supabase, 'property_bathroom_counts', 'property_id', 'bathroom_count_id', id, sel.bathroomIds);
+  await syncMultiSelect(supabase, 'property_developers', 'property_id', 'developer_id', id, sel.developerIds);
+  await syncMultiSelect(supabase, 'property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
 
   revalidatePath(`/properties/${id}`);
   revalidatePath('/properties');
@@ -90,6 +93,7 @@ export async function updatePropertyAction(id: string, formData: FormData) {
 }
 
 export async function deletePropertyAction(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from('properties').delete().eq('id', id);
   if (error) throw error;
 

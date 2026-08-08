@@ -1,10 +1,12 @@
 import { getTasks, getTaskTypes } from '@/lib/tasks';
 import { getClientsBasic } from '@/lib/clients';
+import { createClient } from '@/lib/supabase/server';
 import TasksList from '@/components/TasksList';
 import AddTaskButton from '@/components/AddTaskButton';
 
 export default async function TasksPage() {
-  const [tasks, taskTypes, clients] = await Promise.all([getTasks(), getTaskTypes(), getClientsBasic()]);
+  const supabase = await createClient();
+  const [tasks, taskTypes, clients] = await Promise.all([getTasks(supabase), getTaskTypes(supabase), getClientsBasic(supabase)]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">

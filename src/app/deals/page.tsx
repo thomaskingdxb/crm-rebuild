@@ -2,15 +2,17 @@ import Link from 'next/link';
 import { getDeals, getDealLookups, computeDealStats } from '@/lib/deals';
 import { getClientsBasic } from '@/lib/clients';
 import { getPropertiesBasic } from '@/lib/properties';
+import { createClient } from '@/lib/supabase/server';
 import DealsKanban from '@/components/DealsKanban';
 import DealStatsCards from '@/components/DealStatsCards';
 
 export default async function DealsPage() {
+  const supabase = await createClient();
   const [deals, lookups, clients, properties] = await Promise.all([
-    getDeals(),
-    getDealLookups(),
-    getClientsBasic(),
-    getPropertiesBasic(),
+    getDeals(supabase),
+    getDealLookups(supabase),
+    getClientsBasic(supabase),
+    getPropertiesBasic(supabase),
   ]);
   const stats = computeDealStats(deals);
 
