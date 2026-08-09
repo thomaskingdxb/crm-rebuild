@@ -40,6 +40,7 @@ export async function upsertRecurringGoalAction(formData: FormData) {
   const startMonth = formData.get('start_month') as string; // 'YYYY-MM'
   const endMonth = formData.get('end_month') as string; // 'YYYY-MM'
   const amountPerMonth = Number(formData.get('amount_per_month'));
+  const existingGroupId = (formData.get('group_id') as string) || null;
 
   if (!metric || !startMonth || !endMonth || isNaN(amountPerMonth)) {
     throw new Error('All recurring target fields are required');
@@ -48,7 +49,14 @@ export async function upsertRecurringGoalAction(formData: FormData) {
     throw new Error('Start month must be before end month');
   }
 
-  const groupId = crypto.randomUUID();
+  // Editing an existing recurring target: clear its old months first so shrinking the
+  // date range (or changing metric) doesn't leave stale rows behind under the same group.
+  if (existingGroupId) {
+    const { error: delError } = await supabase.from('goals').delete().eq('group_id', existingGroupId);
+    if (delError) throw delError;
+  }
+
+  const groupId = existingGroupId ?? crypto.randomUUID();
   const rows = monthsBetween(startMonth, endMonth).map((monthKey) => ({
     period_type: 'monthly' as const,
     period_start: `${monthKey}-01`,
@@ -61,6 +69,7 @@ export async function upsertRecurringGoalAction(formData: FormData) {
   if (error) throw error;
 
   revalidatePath('/kpis');
+  revalidatePath('/');
 }
 
 export async function deleteGoalGroupAction(groupId: string) {
@@ -69,6 +78,7 @@ export async function deleteGoalGroupAction(groupId: string) {
   if (error) throw error;
 
   revalidatePath('/kpis');
+  revalidatePath('/');
 }
 
 export async function addAchievementAction(formData: FormData) {

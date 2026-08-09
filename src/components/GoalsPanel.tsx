@@ -81,8 +81,10 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
 
   const thisMonth = new Date().toISOString().slice(0, 7);
   const nextYear = `${new Date().getFullYear()}-12`;
+  const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [startMonth, setStartMonth] = useState(thisMonth);
   const [endMonth, setEndMonth] = useState(nextYear);
+  const [metric, setMetric] = useState<Goal['metric']>('revenue');
   const [amountPerMonth, setAmountPerMonth] = useState<string>('');
 
   const monthCount = useMemo(() => {
@@ -93,6 +95,23 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
 
   const { groups, singles } = useMemo(() => groupGoals(goals), [goals]);
 
+  function startEdit(g: GoalGroup) {
+    setMode('recurring');
+    setEditingGroupId(g.groupId);
+    setStartMonth(g.startMonth);
+    setEndMonth(g.endMonth);
+    setMetric(g.metric);
+    setAmountPerMonth(String(g.amountPerMonth));
+  }
+
+  function cancelEdit() {
+    setEditingGroupId(null);
+    setStartMonth(thisMonth);
+    setEndMonth(nextYear);
+    setMetric('revenue');
+    setAmountPerMonth('');
+  }
+
   return (
     <div className="surface-card p-4">
       <p className="mb-3 text-xs font-medium text-zinc-500">Targets</p>
@@ -101,16 +120,29 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
         <button type="button" className={tabClass(mode === 'recurring')} onClick={() => setMode('recurring')}>
           Recurring Monthly
         </button>
-        <button type="button" className={tabClass(mode === 'one_off')} onClick={() => setMode('one_off')}>
+        <button
+          type="button"
+          className={tabClass(mode === 'one_off')}
+          onClick={() => {
+            setMode('one_off');
+            cancelEdit();
+          }}
+        >
           One-off
         </button>
       </div>
 
       {mode === 'recurring' ? (
         <form
-          action={(formData) => startTransition(() => upsertRecurringGoalAction(formData))}
+          action={(formData) => startTransition(() => upsertRecurringGoalAction(formData).then(() => setEditingGroupId(null)))}
           className="mb-4 space-y-3 border-b border-white/5 pb-4"
         >
+          {editingGroupId && <input type="hidden" name="group_id" value={editingGroupId} />}
+          {editingGroupId && (
+            <p className="text-xs text-blue-300">
+              Editing recurring target · <button type="button" onClick={cancelEdit} className="underline hover:text-blue-200">Cancel</button>
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
               <label className={labelClass}>From</label>
@@ -134,7 +166,7 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
             </div>
             <div>
               <label className={labelClass}>Metric</label>
-              <select name="metric" className={inputClass} defaultValue="revenue">
+              <select name="metric" className={inputClass} value={metric} onChange={(e) => setMetric(e.target.value as Goal['metric'])}>
                 <option value="deals_agreed">Deals Agreed</option>
                 <option value="deals_completed">Deals Completed</option>
                 <option value="revenue">Revenue</option>
@@ -164,7 +196,7 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
             disabled={pending || monthCount === 0}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
           >
-            Save Recurring Target
+            {editingGroupId ? 'Update Recurring Target' : 'Save Recurring Target'}
           </button>
         </form>
       ) : (
@@ -229,14 +261,24 @@ export default function GoalsPanel({ goals, defaultPeriodStart }: { goals: Goal[
                 {g.total.toLocaleString()}
               </span>
             </div>
-            <ConfirmButton
-              label="Delete"
-              message={`Delete all ${g.goals.length} months of this recurring target?`}
-              confirmLabel="Delete"
-              disabled={pending}
-              onConfirm={() => startTransition(() => deleteGoalGroupAction(g.groupId))}
-              className="rounded-lg bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 transition hover:bg-rose-500/20"
-            />
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => startEdit(g)}
+                disabled={pending}
+                className="rounded-lg bg-white/5 px-2 py-1 text-[10px] font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:bg-white/10 disabled:opacity-50"
+              >
+                Edit
+              </button>
+              <ConfirmButton
+                label="Delete"
+                message={`Delete all ${g.goals.length} months of this recurring target?`}
+                confirmLabel="Delete"
+                disabled={pending}
+                onConfirm={() => startTransition(() => deleteGoalGroupAction(g.groupId))}
+                className="rounded-lg bg-rose-500/10 px-2 py-1 text-[10px] font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 transition hover:bg-rose-500/20"
+              />
+            </div>
           </div>
         ))}
 

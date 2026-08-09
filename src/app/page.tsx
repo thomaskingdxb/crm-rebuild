@@ -1,6 +1,7 @@
 import type React from 'react';
 import Link from 'next/link';
 import { getDashboardStats } from '@/lib/dashboard';
+import { getGoals, getMonthlySeries, computeYearProgress } from '@/lib/kpis';
 import { createClient } from '@/lib/supabase/server';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -65,6 +66,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M19 5 5 19" />
       <circle cx="6.5" cy="6.5" r="2.5" />
       <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
+  ),
+  kpi: (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
     </svg>
   ),
 };
@@ -232,6 +240,65 @@ function CommissionStatCard({
   );
 }
 
+function KpiProgressCard({
+  monthActual,
+  monthTarget,
+  ytdActual,
+  ytdTargetToDate,
+  yearlyTargetTotal,
+}: {
+  monthActual: number;
+  monthTarget: number | null;
+  ytdActual: number;
+  ytdTargetToDate: number;
+  yearlyTargetTotal: number;
+}) {
+  if (yearlyTargetTotal === 0) {
+    return (
+      <Link href="/kpis" className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+        <CardHeader icon="kpi" title="Revenue Targets" />
+        <p className="text-sm text-zinc-500">No revenue targets set yet — add a recurring monthly target.</p>
+      </Link>
+    );
+  }
+
+  const yearPct = Math.round((ytdActual / yearlyTargetTotal) * 100);
+  const monthVariance = monthTarget != null ? monthActual - monthTarget : null;
+  const ytdVariance = ytdActual - ytdTargetToDate;
+
+  return (
+    <Link href="/kpis" className="surface-card-accent p-5 transition hover:ring-1 hover:ring-blue-500/30">
+      <CardHeader icon="kpi" title="Revenue Targets" />
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <div>
+          <p className="text-xl font-semibold text-zinc-100">{money(monthActual)}</p>
+          <p className="text-[10px] text-zinc-500">This month{monthTarget != null ? ` of ${money(monthTarget)}` : ''}</p>
+        </div>
+        <div>
+          <p className="text-xl font-semibold text-zinc-100">{money(ytdActual)}</p>
+          <p className="text-[10px] text-zinc-500">YTD of {money(ytdTargetToDate)}</p>
+        </div>
+        <div>
+          <p className={`text-sm font-medium ${monthVariance != null && monthVariance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {monthVariance != null ? `${monthVariance >= 0 ? '+' : ''}${money(monthVariance)}` : '—'}
+          </p>
+          <p className="text-[10px] text-zinc-500">Month variance</p>
+        </div>
+        <div>
+          <p className={`text-sm font-medium ${ytdVariance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+            {ytdVariance >= 0 ? '+' : ''}
+            {money(ytdVariance)}
+          </p>
+          <p className="text-[10px] text-zinc-500">YTD variance</p>
+        </div>
+      </div>
+      <p className="mt-3 border-t border-white/5 pt-3 text-xs text-zinc-500">
+        {money(ytdActual)} of {money(yearlyTargetTotal)} full-year target ({yearPct}%)
+      </p>
+    </Link>
+  );
+}
+
 function dubaiGreeting(): string {
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', hour: 'numeric', hour12: false }).format(new Date()));
   if (hour >= 5 && hour < 12) return 'Good morning';
@@ -252,7 +319,12 @@ function dubaiDate(): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const stats = await getDashboardStats(supabase);
+  const [stats, goals, series] = await Promise.all([getDashboardStats(supabase), getGoals(supabase), getMonthlySeries(supabase)]);
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const revenueProgress = computeYearProgress(series, goals, 'revenue', now.getFullYear());
+  const thisMonthProgress = revenueProgress.months.find((m) => m.monthKey === currentMonthKey);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -301,6 +373,13 @@ export default async function DashboardPage() {
             netCompleted={stats.dealStats.commissionNet}
             grossPending={stats.dealStats.commissionGrossPending}
             netPending={stats.dealStats.commissionNetPending}
+          />
+          <KpiProgressCard
+            monthActual={thisMonthProgress?.actual ?? 0}
+            monthTarget={thisMonthProgress?.target ?? null}
+            ytdActual={revenueProgress.cumulativeActualToDate}
+            ytdTargetToDate={revenueProgress.cumulativeTargetToDate}
+            yearlyTargetTotal={revenueProgress.yearlyTargetTotal}
           />
         </div>
 
