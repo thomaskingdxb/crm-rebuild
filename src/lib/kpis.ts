@@ -118,6 +118,93 @@ export function buildKpiChartData(series: MonthlyPoint[], goals: Goal[], metric:
   }));
 }
 
+// Inclusive list of 'YYYY-MM' keys between two 'YYYY-MM' (or 'YYYY-MM-DD') strings.
+export function monthsBetween(start: string, end: string): string[] {
+  const [startYear, startMonth] = start.slice(0, 7).split('-').map(Number);
+  const [endYear, endMonth] = end.slice(0, 7).split('-').map(Number);
+
+  const keys: string[] = [];
+  let year = startYear;
+  let month = startMonth;
+  while (year < endYear || (year === endYear && month <= endMonth)) {
+    keys.push(`${year}-${String(month).padStart(2, '0')}`);
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+  }
+  return keys;
+}
+
+export interface MonthProgress {
+  monthKey: string;
+  label: string;
+  target: number | null;
+  actual: number;
+  variance: number | null; // actual - target, null when no target set
+}
+
+export interface YearProgress {
+  months: MonthProgress[]; // Jan..Dec of `year`
+  yearlyTargetTotal: number; // sum of every month's target in `year` (0 if none set)
+  cumulativeTargetToDate: number; // sum of targets for elapsed months (Jan..currentMonth, or full year if `year` is in the past)
+  cumulativeActualToDate: number; // sum of actuals over the same elapsed months
+  cumulativeVariance: number; // cumulativeActualToDate - cumulativeTargetToDate
+}
+
+// "Actual" is always the *completed* figure (deals closed / commission earned) — the metric
+// that answers "what's actually been made", as opposed to deals merely agreed.
+export function computeYearProgress(series: MonthlyPoint[], goals: Goal[], metric: KpiMetric, year: number): YearProgress {
+  const goalMetric = metric === 'deals' ? 'deals_completed' : 'revenue';
+  const targets = new Map<string, number>();
+  for (const g of goals) {
+    if (g.period_type === 'monthly' && g.metric === goalMetric && g.period_start.slice(0, 4) === String(year)) {
+      targets.set(g.period_start.slice(0, 7), g.target_value);
+    }
+  }
+
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const yearIsPast = year < now.getFullYear();
+
+  const months: MonthProgress[] = [];
+  let cumulativeTargetToDate = 0;
+  let cumulativeActualToDate = 0;
+  let yearlyTargetTotal = 0;
+
+  for (let m = 0; m < 12; m++) {
+    const monthKey = `${year}-${String(m + 1).padStart(2, '0')}`;
+    const point = series.find((p) => p.monthKey === monthKey);
+    const actual = point ? (metric === 'deals' ? point.dealsCompleted : point.revenueCompleted) : 0;
+    const target = targets.get(monthKey) ?? null;
+
+    if (target != null) yearlyTargetTotal += target;
+
+    const elapsed = yearIsPast || monthKey <= currentMonthKey;
+    if (elapsed) {
+      cumulativeActualToDate += actual;
+      if (target != null) cumulativeTargetToDate += target;
+    }
+
+    months.push({
+      monthKey,
+      label: MONTH_LABELS[m],
+      target,
+      actual,
+      variance: target != null ? actual - target : null,
+    });
+  }
+
+  return {
+    months,
+    yearlyTargetTotal,
+    cumulativeTargetToDate,
+    cumulativeActualToDate,
+    cumulativeVariance: cumulativeActualToDate - cumulativeTargetToDate,
+  };
+}
+
 export function periodStartFor(periodType: Goal['period_type'], date: Date = new Date()): string {
   const year = date.getFullYear();
   const month = date.getMonth();

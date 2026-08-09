@@ -159,6 +159,7 @@ export interface Goal {
   metric: 'deals_agreed' | 'deals_completed' | 'revenue';
   target_value: number;
   created_at: string;
+  group_id: string | null; // links monthly rows created together as one recurring target
 }
 
 export interface Achievement {

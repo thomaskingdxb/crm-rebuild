@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getGoals, getAchievements, getMonthlySeries, periodStartFor } from '@/lib/kpis';
 import KpiChart from '@/components/KpiChart';
 import KpiStatCards from '@/components/KpiStatCards';
+import ProgressPanel from '@/components/ProgressPanel';
 import GoalsPanel from '@/components/GoalsPanel';
 import AchievementsPanel from '@/components/AchievementsPanel';
 
@@ -29,6 +30,10 @@ export default async function KpisPage() {
         </div>
 
         <KpiStatCards series={series} goals={goals} />
+
+        <div className="mb-6">
+          <ProgressPanel series={series} goals={goals} />
+        </div>
 
         <div className="mb-6">
           <KpiChart series={series} goals={goals} />
