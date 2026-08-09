@@ -1,5 +1,5 @@
 import type { Goal } from '@/types/database';
-import type { MonthlyDealCounts } from '@/lib/kpis';
+import type { MonthlyPoint } from '@/lib/kpis';
 
 function progressPct(actual: number, target: number | null): number | null {
   if (target == null || target <= 0) return null;
@@ -27,38 +27,36 @@ function StatCard({ title, value, sub, target }: { title: string; value: string;
   );
 }
 
-export default function KpiStatCards({
-  monthCounts,
-  yearCounts,
-  goals,
-  monthLabel,
-}: {
-  monthCounts: MonthlyDealCounts | undefined;
-  yearCounts: MonthlyDealCounts[];
-  goals: Goal[];
-  monthLabel: string;
-}) {
-  const ytdAgreed = yearCounts.reduce((sum, m) => sum + m.agreed, 0);
-  const ytdCompleted = yearCounts.reduce((sum, m) => sum + m.completed, 0);
+export default function KpiStatCards({ series, goals }: { series: MonthlyPoint[]; goals: Goal[] }) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthKey = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthLabel = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  const monthPoint = series.find((m) => m.monthKey === currentMonthKey);
+  const ytdPoints = series.filter((m) => m.year === currentYear && m.monthKey <= currentMonthKey);
+
+  const ytdAgreed = ytdPoints.reduce((sum, m) => sum + m.dealsAgreed, 0);
+  const ytdCompleted = ytdPoints.reduce((sum, m) => sum + m.dealsCompleted, 0);
 
   const monthlyTarget = goals.find(
-    (g) => g.period_type === 'monthly' && g.metric === 'deals_completed' && g.period_start.slice(0, 7) === monthCounts?.month.slice(0, 7)
+    (g) => g.period_type === 'monthly' && g.metric === 'deals_completed' && g.period_start.slice(0, 7) === currentMonthKey
   );
   const annualTarget = goals.find((g) => g.period_type === 'annual' && g.metric === 'deals_completed');
 
-  const monthPct = progressPct(monthCounts?.completed ?? 0, monthlyTarget?.target_value ?? null);
+  const monthPct = progressPct(monthPoint?.dealsCompleted ?? 0, monthlyTarget?.target_value ?? null);
   const yearPct = progressPct(ytdCompleted, annualTarget?.target_value ?? null);
 
   return (
     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="Deals Agreed (Month)" value={`${monthCounts?.agreed ?? 0}`} sub={monthLabel} />
+      <StatCard title="Deals Agreed (Month)" value={`${monthPoint?.dealsAgreed ?? 0}`} sub={monthLabel} />
       <StatCard
         title="Deals Completed (Month)"
-        value={`${monthCounts?.completed ?? 0}`}
+        value={`${monthPoint?.dealsCompleted ?? 0}`}
         sub={monthLabel}
         target={
           monthlyTarget
-            ? { pct: monthPct, label: `${monthCounts?.completed ?? 0} of ${monthlyTarget.target_value} target` }
+            ? { pct: monthPct, label: `${monthPoint?.dealsCompleted ?? 0} of ${monthlyTarget.target_value} target` }
             : undefined
         }
       />

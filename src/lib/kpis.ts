@@ -14,48 +14,74 @@ export async function getAchievements(db: SupabaseClient = defaultClient): Promi
   return data as Achievement[];
 }
 
-export interface MonthlyDealCounts {
-  month: string; // 'YYYY-MM-01'
-  agreed: number;
-  completed: number;
+export interface MonthlyPoint {
+  monthKey: string; // 'YYYY-MM'
+  year: number;
+  label: string; // e.g. 'Jan 2026'
+  dealsAgreed: number;
+  dealsCompleted: number;
+  revenueAgreed: number;
+  revenueCompleted: number;
 }
 
-export async function getYtdMonthlyDealCounts(
-  year: number,
-  db: SupabaseClient = defaultClient
-): Promise<MonthlyDealCounts[]> {
-  const yearStart = `${year}-01-01`;
-  const yearEnd = `${year}-12-31`;
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Builds a monthly series spanning Jan of last year through Dec of this year, so the
+// chart can offer YTD / rolling-12-months / full-calendar-year views without refetching.
+export async function getMonthlySeries(db: SupabaseClient = defaultClient): Promise<MonthlyPoint[]> {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const rangeStartYear = currentYear - 1;
+  const rangeStart = `${rangeStartYear}-01-01`;
+  const rangeEnd = `${currentYear}-12-31`;
 
   const { data, error } = await db
     .from('deals')
-    .select('date_agreed, date_completed')
-    .or(
-      `and(date_agreed.gte.${yearStart},date_agreed.lte.${yearEnd}),and(date_completed.gte.${yearStart},date_completed.lte.${yearEnd})`
-    );
+    .select('date_agreed, date_completed, commission_amount')
+    .or(`and(date_agreed.gte.${rangeStart},date_agreed.lte.${rangeEnd}),and(date_completed.gte.${rangeStart},date_completed.lte.${rangeEnd})`);
   if (error) throw error;
 
-  const rows = data as { date_agreed: string | null; date_completed: string | null }[];
-  const currentMonth = new Date().getFullYear() === year ? new Date().getMonth() : 11;
-  const months: MonthlyDealCounts[] = Array.from({ length: currentMonth + 1 }, (_, i) => ({
-    month: `${year}-${String(i + 1).padStart(2, '0')}-01`,
-    agreed: 0,
-    completed: 0,
-  }));
+  const rows = data as { date_agreed: string | null; date_completed: string | null; commission_amount: number | null }[];
+
+  const months: MonthlyPoint[] = [];
+  for (let year = rangeStartYear; year <= currentYear; year++) {
+    for (let m = 0; m < 12; m++) {
+      months.push({
+        monthKey: `${year}-${String(m + 1).padStart(2, '0')}`,
+        year,
+        label: `${MONTH_LABELS[m]} ${year}`,
+        dealsAgreed: 0,
+        dealsCompleted: 0,
+        revenueAgreed: 0,
+        revenueCompleted: 0,
+      });
+    }
+  }
+  const byKey = new Map(months.map((m) => [m.monthKey, m]));
 
   for (const row of rows) {
-    if (row.date_agreed?.startsWith(`${year}-`)) {
-      const idx = parseInt(row.date_agreed.slice(5, 7), 10) - 1;
-      if (months[idx]) months[idx].agreed += 1;
+    const commission = row.commission_amount ?? 0;
+    if (row.date_agreed) {
+      const point = byKey.get(row.date_agreed.slice(0, 7));
+      if (point) {
+        point.dealsAgreed += 1;
+        point.revenueAgreed += commission;
+      }
     }
-    if (row.date_completed?.startsWith(`${year}-`)) {
-      const idx = parseInt(row.date_completed.slice(5, 7), 10) - 1;
-      if (months[idx]) months[idx].completed += 1;
+    if (row.date_completed) {
+      const point = byKey.get(row.date_completed.slice(0, 7));
+      if (point) {
+        point.dealsCompleted += 1;
+        point.revenueCompleted += commission;
+      }
     }
   }
 
   return months;
 }
+
+export type KpiMetric = 'deals' | 'revenue';
+export type KpiDuration = 'ytd' | 'year' | 'last_12';
 
 export interface KpiChartPoint {
   month: string; // e.g. 'Jan'
@@ -64,26 +90,32 @@ export interface KpiChartPoint {
   target: number | null;
 }
 
-export function buildKpiChartData(counts: MonthlyDealCounts[], goals: Goal[]): KpiChartPoint[] {
+export function selectSeriesForDuration(series: MonthlyPoint[], duration: KpiDuration): MonthlyPoint[] {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthKey = `${currentYear}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const upToNow = series.filter((m) => m.monthKey <= currentMonthKey);
+
+  if (duration === 'year') return series.filter((m) => m.year === currentYear);
+  if (duration === 'last_12') return upToNow.slice(-12);
+  return upToNow.filter((m) => m.year === currentYear); // ytd
+}
+
+export function buildKpiChartData(series: MonthlyPoint[], goals: Goal[], metric: KpiMetric): KpiChartPoint[] {
+  const goalMetric = metric === 'deals' ? 'deals_completed' : 'revenue';
   const monthlyTargets = new Map<string, number>();
   for (const g of goals) {
-    if (g.period_type === 'monthly' && g.metric === 'deals_completed') {
+    if (g.period_type === 'monthly' && g.metric === goalMetric) {
       monthlyTargets.set(g.period_start.slice(0, 7), g.target_value);
     }
   }
 
-  const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  return counts.map((c) => {
-    const monthKey = c.month.slice(0, 7);
-    const monthIdx = parseInt(c.month.slice(5, 7), 10) - 1;
-    return {
-      month: labels[monthIdx],
-      agreed: c.agreed,
-      completed: c.completed,
-      target: monthlyTargets.get(monthKey) ?? null,
-    };
-  });
+  return series.map((m) => ({
+    month: m.label,
+    agreed: metric === 'deals' ? m.dealsAgreed : m.revenueAgreed,
+    completed: metric === 'deals' ? m.dealsCompleted : m.revenueCompleted,
+    target: monthlyTargets.get(m.monthKey) ?? null,
+  }));
 }
 
 export function periodStartFor(periodType: Goal['period_type'], date: Date = new Date()): string {
