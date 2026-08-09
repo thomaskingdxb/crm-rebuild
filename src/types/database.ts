@@ -151,3 +151,20 @@ export interface DealWithRelations extends Deal {
 export interface DealForClient extends DealWithRelations {
   role: 'Buyer/Tenant' | 'Seller/Landlord';
 }
+
+export interface Goal {
+  id: number;
+  period_type: 'monthly' | 'quarterly' | 'annual';
+  period_start: string; // first day of the period, e.g. '2026-08-01'
+  metric: 'deals_agreed' | 'deals_completed' | 'revenue';
+  target_value: number;
+  created_at: string;
+}
+
+export interface Achievement {
+  id: number;
+  title: string;
+  description: string | null;
+  achieved_date: string;
+  created_at: string;
+}
