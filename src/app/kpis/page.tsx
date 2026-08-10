@@ -36,7 +36,7 @@ export default async function KpisPage() {
         </div>
 
         <div className="mb-6">
-          <KpiChart series={series} goals={goals} />
+          <KpiChart series={series} goals={goals} defaultMetric="revenue" defaultDuration="year" />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
