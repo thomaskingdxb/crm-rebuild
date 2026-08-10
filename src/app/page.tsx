@@ -313,7 +313,7 @@ export default async function DashboardPage() {
               View full KPIs →
             </Link>
           </div>
-          <KpiChart series={series} goals={goals} />
+          <KpiChart series={series} goals={goals} defaultMetric="revenue" defaultDuration="year" />
         </div>
 
         <div className="mt-8 flex flex-wrap gap-3">

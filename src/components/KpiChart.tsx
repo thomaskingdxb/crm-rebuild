@@ -21,9 +21,19 @@ function selectClass(active: boolean) {
   }`;
 }
 
-export default function KpiChart({ series, goals }: { series: MonthlyPoint[]; goals: Goal[] }) {
-  const [metric, setMetric] = useState<KpiMetric>('deals');
-  const [duration, setDuration] = useState<KpiDuration>('ytd');
+export default function KpiChart({
+  series,
+  goals,
+  defaultMetric = 'deals',
+  defaultDuration = 'ytd',
+}: {
+  series: MonthlyPoint[];
+  goals: Goal[];
+  defaultMetric?: KpiMetric;
+  defaultDuration?: KpiDuration;
+}) {
+  const [metric, setMetric] = useState<KpiMetric>(defaultMetric);
+  const [duration, setDuration] = useState<KpiDuration>(defaultDuration);
 
   const data = useMemo(() => {
     const selected = selectSeriesForDuration(series, duration);
