@@ -1,16 +1,137 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { ClientListItem, Lookup } from '@/types/database';
-import ClientCard from '@/components/ClientCard';
+import { daysSince, formatDate } from '@/lib/date';
+import { telHref, whatsappHref } from '@/lib/phone';
+import LogActivityButton from '@/components/LogActivityButton';
 import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
 const pillActive = 'bg-blue-500/20 text-blue-300 ring-blue-500/40';
 
+const STATUS_STYLES: Record<string, string> = {
+  Ongoing: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  Closed: 'bg-white/5 text-zinc-400 ring-white/10',
+  Unresponsive: 'bg-rose-500/10 text-rose-400 ring-rose-500/20',
+};
+
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function activityChipClass(days: number | null): string {
+  if (days === null) return 'bg-white/5 text-zinc-500 ring-white/10';
+  if (days <= 7) return 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20';
+  if (days <= 30) return 'bg-amber-500/10 text-amber-400 ring-amber-500/20';
+  return 'bg-rose-500/10 text-rose-400 ring-rose-500/20';
+}
+
+function followUpClass(followUp: string | null): string {
+  if (!followUp) return 'text-zinc-500';
+  const days = daysSince(followUp);
+  if (days === null) return 'text-zinc-500';
+  if (days > 0) return 'text-rose-400';
+  if (days === 0) return 'text-amber-400';
+  return 'text-zinc-400';
+}
+
+function ClientRow({ client, activityTypes }: { client: ClientListItem; activityTypes: Lookup[] }) {
+  const router = useRouter();
+  const days = daysSince(client.lastActivityDate);
+  const tel = telHref(client.phone);
+  const wa = whatsappHref(client.phone);
+  const types = client.client_client_types.map((t) => t.client_types.name);
+  const statuses = client.client_client_statuses.map((s) => s.client_statuses.name);
+
+  return (
+    <tr onClick={() => router.push(`/clients/${client.id}`)} className="cursor-pointer border-b border-white/5 transition last:border-0 hover:bg-white/5">
+      <td className="px-3 py-3 pl-5">
+        <p className="font-medium text-zinc-100">{client.name}</p>
+        <p className="text-xs text-zinc-500">{client.id}</p>
+      </td>
+      <td className="px-3 py-3">
+        <div className="flex flex-wrap gap-1">
+          {types.map((t) => (
+            <span key={t} className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20">
+              {t}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-3 py-3">
+        <div className="flex flex-wrap gap-1">
+          {statuses.map((s) => (
+            <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[s] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
+              {s}
+            </span>
+          ))}
+        </div>
+      </td>
+      <td className="px-3 py-3">
+        <span
+          title="Days since last activity"
+          className={`inline-flex shrink-0 items-center justify-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${activityChipClass(days)}`}
+        >
+          {days ?? '—'}
+        </span>
+      </td>
+      <td className={`px-3 py-3 font-medium ${followUpClass(client.follow_up_date)}`}>{client.follow_up_date ? formatDate(client.follow_up_date) : '—'}</td>
+      <td className="max-w-[220px] truncate px-3 py-3 text-xs text-zinc-500">{client.notes || '—'}</td>
+      <td className="px-3 py-3 pr-5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex flex-wrap justify-end gap-2">
+          <LogActivityButton
+            clientId={client.id}
+            activityTypes={activityTypes}
+            label="Log Activity"
+            className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 transition hover:bg-blue-500/20"
+          />
+          {wa && (
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 transition hover:bg-emerald-500/20"
+            >
+              WhatsApp
+            </a>
+          )}
+          {tel && (
+            <a href={tel} className="rounded-lg bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 transition hover:bg-blue-500/20">
+              Call
+            </a>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function FollowUpsTable({ rows, activityTypes }: { rows: ClientListItem[]; activityTypes: Lookup[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl bg-white/[0.02] ring-1 ring-white/5">
+      <table className="w-full min-w-[900px] border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-white/10">
+            <th className="whitespace-nowrap px-3 py-2 pl-5 text-left text-xs font-medium text-zinc-500">Name</th>
+            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Type</th>
+            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Status</th>
+            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Last Activity</th>
+            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Follow Up</th>
+            <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Notes</th>
+            <th className="whitespace-nowrap px-3 py-2 pr-5 text-right text-xs font-medium text-zinc-500">Quick Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((c) => (
+            <ClientRow key={c.id} client={c} activityTypes={activityTypes} />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function FollowUpsList({
@@ -198,11 +319,7 @@ export default function FollowUpsList({
                           Due Today
                           <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] ring-1 ring-inset ring-amber-500/20">{g.dueToday.length}</span>
                         </p>
-                        <div className="flex flex-col gap-3">
-                          {g.dueToday.map((c) => (
-                            <ClientCard key={c.id} client={c} activityTypes={activityTypes} />
-                          ))}
-                        </div>
+                        <FollowUpsTable rows={g.dueToday} activityTypes={activityTypes} />
                       </div>
                     )}
 
@@ -212,11 +329,7 @@ export default function FollowUpsList({
                           Overdue
                           <span className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] ring-1 ring-inset ring-rose-500/20">{g.overdue.length}</span>
                         </p>
-                        <div className="flex flex-col gap-3">
-                          {g.overdue.map((c) => (
-                            <ClientCard key={c.id} client={c} activityTypes={activityTypes} />
-                          ))}
-                        </div>
+                        <FollowUpsTable rows={g.overdue} activityTypes={activityTypes} />
                       </div>
                     )}
                   </div>
