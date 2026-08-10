@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
 import { usePersistentState } from '@/lib/usePersistentState';
@@ -31,7 +31,6 @@ interface PropertyLookups {
 }
 
 type FilterKey = 'status' | 'type' | 'area' | 'developer' | 'bedroom' | 'bathroom' | 'view';
-type SortKey = 'unit' | 'status' | 'type' | 'area' | 'beds' | 'sqft' | 'price' | 'rent';
 
 function FilterGroup({
   title,
@@ -58,29 +57,17 @@ function FilterGroup({
   );
 }
 
-function SortHeader({
-  label,
-  sortKey,
-  active,
-  direction,
-  onSort,
-  className,
-}: {
-  label: string;
-  sortKey: SortKey;
-  active: boolean;
-  direction: 'asc' | 'desc';
-  onSort: (key: SortKey) => void;
-  className?: string;
-}) {
-  return (
-    <th className={`whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500 ${className ?? ''}`}>
-      <button type="button" onClick={() => onSort(sortKey)} className={`inline-flex items-center gap-1 transition hover:text-zinc-300 ${active ? 'text-zinc-200' : ''}`}>
-        {label}
-        {active && <span className="text-[10px]">{direction === 'asc' ? '▲' : '▼'}</span>}
-      </button>
-    </th>
-  );
+// Natural sort for unit numbers like "108", "222A" — numeric prefix first, then remainder, blanks last.
+function unitSortValue(unit: string | null): [number, string] {
+  if (!unit) return [Infinity, ''];
+  const match = unit.match(/^\d+/);
+  return match ? [parseInt(match[0], 10), unit.slice(match[0].length)] : [Infinity, unit];
+}
+
+function bedroomSortValue(label: string): number {
+  if (label.toLowerCase() === 'studio') return 0;
+  const n = parseInt(label, 10);
+  return Number.isNaN(n) ? 999 : n;
 }
 
 export default function PropertiesList({ properties, lookups }: { properties: PropertyWithRelations[]; lookups: PropertyLookups }) {
@@ -95,10 +82,6 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
     bedroom: new Set(),
     bathroom: new Set(),
     view: new Set(),
-  });
-  const [sort, setSort] = usePersistentState<{ key: SortKey; direction: 'asc' | 'desc' }>('properties:sort', {
-    key: 'unit',
-    direction: 'asc',
   });
 
   function toggle(key: FilterKey, id: number) {
@@ -120,10 +103,6 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       bathroom: new Set(),
       view: new Set(),
     });
-  }
-
-  function handleSort(key: SortKey) {
-    setSort((prev) => (prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }));
   }
 
   const activeFilterCount = Object.values(selected).reduce((sum, s) => sum + s.size, 0);
@@ -166,35 +145,50 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
     });
   }, [properties, query, selected]);
 
-  const sorted = useMemo(() => {
-    const dir = sort.direction === 'asc' ? 1 : -1;
-    const val = (p: PropertyWithRelations): string | number => {
-      switch (sort.key) {
-        case 'unit':
-          return `${p.building ?? ''} ${p.unit_number ?? ''}`.trim().toLowerCase();
-        case 'status':
-          return p.property_property_statuses[0]?.property_statuses.name ?? '';
-        case 'type':
-          return p.property_property_types[0]?.property_types.name ?? '';
-        case 'area':
-          return p.property_areas[0]?.areas.name ?? '';
-        case 'beds':
-          return Number(p.property_bedroom_counts[0]?.bedroom_counts.name) || 0;
-        case 'sqft':
-          return p.sqft ?? 0;
-        case 'price':
-          return p.asking_price ?? 0;
-        case 'rent':
-          return p.rental_income ?? 0;
-      }
-    };
-    return [...filtered].sort((a, b) => {
-      const av = val(a);
-      const bv = val(b);
-      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
-      return String(av).localeCompare(String(bv)) * dir;
+  // Grouped Building -> Bedrooms -> rows sorted by unit number, per the default view.
+  const buildingGroups = useMemo(() => {
+    type Row = PropertyWithRelations;
+    const byBuilding = new Map<string, Row[]>();
+    for (const p of filtered) {
+      const key = p.building ?? 'No Building';
+      const arr = byBuilding.get(key) ?? [];
+      arr.push(p);
+      byBuilding.set(key, arr);
+    }
+
+    const buildings = Array.from(byBuilding.entries()).sort(([a], [b]) => {
+      if (a === 'No Building') return 1;
+      if (b === 'No Building') return -1;
+      return a.localeCompare(b);
     });
-  }, [filtered, sort]);
+
+    return buildings.map(([building, rows]) => {
+      const byBedroom = new Map<string, Row[]>();
+      for (const p of rows) {
+        const key = p.property_bedroom_counts[0]?.bedroom_counts.name ?? 'Unspecified';
+        const arr = byBedroom.get(key) ?? [];
+        arr.push(p);
+        byBedroom.set(key, arr);
+      }
+
+      const bedroomGroups = Array.from(byBedroom.entries())
+        .sort(([a], [b]) => {
+          if (a === 'Unspecified') return 1;
+          if (b === 'Unspecified') return -1;
+          return bedroomSortValue(a) - bedroomSortValue(b);
+        })
+        .map(([bedroomLabel, bedroomRows]) => ({
+          bedroomLabel,
+          rows: [...bedroomRows].sort((a, b) => {
+            const [an, as] = unitSortValue(a.unit_number);
+            const [bn, bs] = unitSortValue(b.unit_number);
+            return an - bn || as.localeCompare(bs);
+          }),
+        }));
+
+      return { building, bedroomGroups };
+    });
+  }, [filtered]);
 
   return (
     <div>
@@ -241,65 +235,85 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
         {filtered.length} of {properties.length} properties
       </p>
 
-      {sorted.length === 0 ? (
+      {filtered.length === 0 ? (
         <p className="text-zinc-500">No properties match your search.</p>
       ) : (
         <div className="surface-card overflow-x-auto p-0">
-          <table className="w-full min-w-[900px] border-collapse text-sm">
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
             <thead>
               <tr className="border-b border-white/10">
-                <SortHeader label="Unit / Building" sortKey="unit" active={sort.key === 'unit'} direction={sort.direction} onSort={handleSort} className="pl-5" />
-                <SortHeader label="Status" sortKey="status" active={sort.key === 'status'} direction={sort.direction} onSort={handleSort} />
-                <SortHeader label="Type" sortKey="type" active={sort.key === 'type'} direction={sort.direction} onSort={handleSort} />
-                <SortHeader label="Area" sortKey="area" active={sort.key === 'area'} direction={sort.direction} onSort={handleSort} />
-                <SortHeader label="Beds / Baths" sortKey="beds" active={sort.key === 'beds'} direction={sort.direction} onSort={handleSort} />
-                <SortHeader label="Sqft" sortKey="sqft" active={sort.key === 'sqft'} direction={sort.direction} onSort={handleSort} />
-                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Owner</th>
-                <SortHeader label="Price" sortKey="price" active={sort.key === 'price'} direction={sort.direction} onSort={handleSort} />
-                <SortHeader label="Rent" sortKey="rent" active={sort.key === 'rent'} direction={sort.direction} onSort={handleSort} className="pr-5" />
+                <th className="whitespace-nowrap px-3 py-2 pl-5 text-left text-xs font-medium text-zinc-500">Unit / Building</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Notes</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Beds / Baths</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Status</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Area</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Sqft</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Type</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Price</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Rent</th>
+                <th className="whitespace-nowrap px-3 py-2 pr-5 text-left text-xs font-medium text-zinc-500">Owner</th>
               </tr>
             </thead>
             <tbody>
-              {sorted.map((p) => {
-                const statuses = p.property_property_statuses.map((s) => s.property_statuses.name);
-                const types = p.property_property_types.map((t) => t.property_types.name);
-                const areas = p.property_areas.map((a) => a.areas.name);
-                const beds = p.property_bedroom_counts.map((b) => b.bedroom_counts.name);
-                const baths = p.property_bathroom_counts.map((b) => b.bathroom_counts.name);
-
-                return (
-                  <tr
-                    key={p.id}
-                    onClick={() => router.push(`/properties/${p.id}`)}
-                    className="cursor-pointer border-b border-white/5 transition last:border-0 hover:bg-white/5"
-                  >
-                    <td className="px-3 py-3 pl-5">
-                      <p className="font-medium text-zinc-100">{p.unit_number ?? '—'}</p>
-                      <p className="text-xs text-zinc-500">{p.building ?? '—'}</p>
+              {buildingGroups.map(({ building, bedroomGroups }) => (
+                <Fragment key={`building:${building}`}>
+                  <tr className="border-b border-white/10 bg-white/[0.03]">
+                    <td colSpan={10} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                      {building}
                     </td>
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {statuses.length === 0 && <span className="text-xs text-zinc-600">—</span>}
-                        {statuses.map((s) => (
-                          <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[s] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
-                            {s}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-zinc-300">{types.join(', ') || '—'}</td>
-                    <td className="px-3 py-3 text-zinc-300">{areas.join(', ') || '—'}</td>
-                    <td className="px-3 py-3 text-zinc-300">
-                      {beds.join(', ') || '—'}
-                      {baths.length > 0 ? ` / ${baths.join(', ')}` : ''}
-                    </td>
-                    <td className="px-3 py-3 text-zinc-300">{p.sqft ? p.sqft.toLocaleString() : '—'}</td>
-                    <td className="px-3 py-3 text-zinc-300">{p.clients ? p.clients.name : '—'}</td>
-                    <td className="px-3 py-3 font-medium text-zinc-100">{p.asking_price ? `AED ${p.asking_price.toLocaleString()}` : '—'}</td>
-                    <td className="px-3 py-3 pr-5 font-medium text-zinc-100">{p.rental_income ? `AED ${p.rental_income.toLocaleString()}/yr` : '—'}</td>
                   </tr>
-                );
-              })}
+                  {bedroomGroups.map(({ bedroomLabel, rows }) => (
+                    <Fragment key={`${building}:${bedroomLabel}`}>
+                      <tr className="border-b border-white/5">
+                        <td colSpan={10} className="px-5 py-1.5 text-[11px] font-medium text-zinc-500">
+                          {bedroomLabel === 'Unspecified' ? 'Bedrooms unspecified' : `${bedroomLabel} bed`}
+                        </td>
+                      </tr>
+                      {rows.map((p) => {
+                        const statuses = p.property_property_statuses.map((s) => s.property_statuses.name);
+                        const types = p.property_property_types.map((t) => t.property_types.name);
+                        const areas = p.property_areas.map((a) => a.areas.name);
+                        const beds = p.property_bedroom_counts.map((b) => b.bedroom_counts.name);
+                        const baths = p.property_bathroom_counts.map((b) => b.bathroom_counts.name);
+
+                        return (
+                          <tr
+                            key={p.id}
+                            onClick={() => router.push(`/properties/${p.id}`)}
+                            className="cursor-pointer border-b border-white/5 transition last:border-0 hover:bg-white/5"
+                          >
+                            <td className="px-3 py-3 pl-5">
+                              <p className="font-medium text-zinc-100">{p.unit_number ?? '—'}</p>
+                              <p className="text-xs text-zinc-500">{p.building ?? '—'}</p>
+                            </td>
+                            <td className="max-w-[220px] truncate px-3 py-3 text-xs text-zinc-500">{p.notes || '—'}</td>
+                            <td className="px-3 py-3 text-zinc-300">
+                              {beds.join(', ') || '—'}
+                              {baths.length > 0 ? ` / ${baths.join(', ')}` : ''}
+                            </td>
+                            <td className="px-3 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {statuses.length === 0 && <span className="text-xs text-zinc-600">—</span>}
+                                {statuses.map((s) => (
+                                  <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[s] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-3 py-3 text-zinc-300">{areas.join(', ') || '—'}</td>
+                            <td className="px-3 py-3 text-zinc-300">{p.sqft ? p.sqft.toLocaleString() : '—'}</td>
+                            <td className="px-3 py-3 text-zinc-300">{types.join(', ') || '—'}</td>
+                            <td className="px-3 py-3 font-medium text-zinc-100">{p.asking_price ? `AED ${p.asking_price.toLocaleString()}` : '—'}</td>
+                            <td className="px-3 py-3 font-medium text-zinc-100">{p.rental_income ? `AED ${p.rental_income.toLocaleString()}/yr` : '—'}</td>
+                            <td className="px-3 py-3 pr-5 text-zinc-300">{p.clients ? p.clients.name : '—'}</td>
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>
