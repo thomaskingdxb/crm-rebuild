@@ -1,12 +1,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
-import PropertyCard from '@/components/PropertyCard';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
 const pillActive = 'bg-blue-500/20 text-blue-300 ring-blue-500/40';
+
+const STATUS_STYLES: Record<string, string> = {
+  Rented: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
+  Sold: 'bg-white/5 text-zinc-400 ring-white/10',
+  'For rent': 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
+  'For sale': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  Vacant: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
+  'Property listed': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  'Off plan': 'bg-white/5 text-zinc-400 ring-white/10',
+  Ready: 'bg-white/5 text-zinc-400 ring-white/10',
+};
 
 interface PropertyLookups {
   propertyTypes: Lookup[];
@@ -19,6 +31,7 @@ interface PropertyLookups {
 }
 
 type FilterKey = 'status' | 'type' | 'area' | 'developer' | 'bedroom' | 'bathroom' | 'view';
+type SortKey = 'unit' | 'status' | 'type' | 'area' | 'beds' | 'sqft' | 'price' | 'rent';
 
 function FilterGroup({
   title,
@@ -45,10 +58,36 @@ function FilterGroup({
   );
 }
 
+function SortHeader({
+  label,
+  sortKey,
+  active,
+  direction,
+  onSort,
+  className,
+}: {
+  label: string;
+  sortKey: SortKey;
+  active: boolean;
+  direction: 'asc' | 'desc';
+  onSort: (key: SortKey) => void;
+  className?: string;
+}) {
+  return (
+    <th className={`whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500 ${className ?? ''}`}>
+      <button type="button" onClick={() => onSort(sortKey)} className={`inline-flex items-center gap-1 transition hover:text-zinc-300 ${active ? 'text-zinc-200' : ''}`}>
+        {label}
+        {active && <span className="text-[10px]">{direction === 'asc' ? '▲' : '▼'}</span>}
+      </button>
+    </th>
+  );
+}
+
 export default function PropertiesList({ properties, lookups }: { properties: PropertyWithRelations[]; lookups: PropertyLookups }) {
-  const [query, setQuery] = useState('');
+  const router = useRouter();
+  const [query, setQuery] = usePersistentState('properties:query', '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selected, setSelected] = useState<Record<FilterKey, Set<number>>>({
+  const [selected, setSelected] = usePersistentState<Record<FilterKey, Set<number>>>('properties:selected', {
     status: new Set(),
     type: new Set(),
     area: new Set(),
@@ -56,6 +95,10 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
     bedroom: new Set(),
     bathroom: new Set(),
     view: new Set(),
+  });
+  const [sort, setSort] = usePersistentState<{ key: SortKey; direction: 'asc' | 'desc' }>('properties:sort', {
+    key: 'unit',
+    direction: 'asc',
   });
 
   function toggle(key: FilterKey, id: number) {
@@ -77,6 +120,10 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       bathroom: new Set(),
       view: new Set(),
     });
+  }
+
+  function handleSort(key: SortKey) {
+    setSort((prev) => (prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' }));
   }
 
   const activeFilterCount = Object.values(selected).reduce((sum, s) => sum + s.size, 0);
@@ -118,6 +165,36 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       return true;
     });
   }, [properties, query, selected]);
+
+  const sorted = useMemo(() => {
+    const dir = sort.direction === 'asc' ? 1 : -1;
+    const val = (p: PropertyWithRelations): string | number => {
+      switch (sort.key) {
+        case 'unit':
+          return `${p.building ?? ''} ${p.unit_number ?? ''}`.trim().toLowerCase();
+        case 'status':
+          return p.property_property_statuses[0]?.property_statuses.name ?? '';
+        case 'type':
+          return p.property_property_types[0]?.property_types.name ?? '';
+        case 'area':
+          return p.property_areas[0]?.areas.name ?? '';
+        case 'beds':
+          return Number(p.property_bedroom_counts[0]?.bedroom_counts.name) || 0;
+        case 'sqft':
+          return p.sqft ?? 0;
+        case 'price':
+          return p.asking_price ?? 0;
+        case 'rent':
+          return p.rental_income ?? 0;
+      }
+    };
+    return [...filtered].sort((a, b) => {
+      const av = val(a);
+      const bv = val(b);
+      if (typeof av === 'number' && typeof bv === 'number') return (av - bv) * dir;
+      return String(av).localeCompare(String(bv)) * dir;
+    });
+  }, [filtered, sort]);
 
   return (
     <div>
@@ -164,13 +241,67 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
         {filtered.length} of {properties.length} properties
       </p>
 
-      {filtered.length === 0 ? (
+      {sorted.length === 0 ? (
         <p className="text-zinc-500">No properties match your search.</p>
       ) : (
-        <div className="flex flex-col gap-4">
-          {filtered.map((p) => (
-            <PropertyCard key={p.id} property={p} />
-          ))}
+        <div className="surface-card overflow-x-auto p-0">
+          <table className="w-full min-w-[900px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-white/10">
+                <SortHeader label="Unit / Building" sortKey="unit" active={sort.key === 'unit'} direction={sort.direction} onSort={handleSort} className="pl-5" />
+                <SortHeader label="Status" sortKey="status" active={sort.key === 'status'} direction={sort.direction} onSort={handleSort} />
+                <SortHeader label="Type" sortKey="type" active={sort.key === 'type'} direction={sort.direction} onSort={handleSort} />
+                <SortHeader label="Area" sortKey="area" active={sort.key === 'area'} direction={sort.direction} onSort={handleSort} />
+                <SortHeader label="Beds / Baths" sortKey="beds" active={sort.key === 'beds'} direction={sort.direction} onSort={handleSort} />
+                <SortHeader label="Sqft" sortKey="sqft" active={sort.key === 'sqft'} direction={sort.direction} onSort={handleSort} />
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Owner</th>
+                <SortHeader label="Price" sortKey="price" active={sort.key === 'price'} direction={sort.direction} onSort={handleSort} />
+                <SortHeader label="Rent" sortKey="rent" active={sort.key === 'rent'} direction={sort.direction} onSort={handleSort} className="pr-5" />
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((p) => {
+                const statuses = p.property_property_statuses.map((s) => s.property_statuses.name);
+                const types = p.property_property_types.map((t) => t.property_types.name);
+                const areas = p.property_areas.map((a) => a.areas.name);
+                const beds = p.property_bedroom_counts.map((b) => b.bedroom_counts.name);
+                const baths = p.property_bathroom_counts.map((b) => b.bathroom_counts.name);
+
+                return (
+                  <tr
+                    key={p.id}
+                    onClick={() => router.push(`/properties/${p.id}`)}
+                    className="cursor-pointer border-b border-white/5 transition last:border-0 hover:bg-white/5"
+                  >
+                    <td className="px-3 py-3 pl-5">
+                      <p className="font-medium text-zinc-100">{p.unit_number ?? '—'}</p>
+                      <p className="text-xs text-zinc-500">{p.building ?? '—'}</p>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {statuses.length === 0 && <span className="text-xs text-zinc-600">—</span>}
+                        {statuses.map((s) => (
+                          <span key={s} className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${STATUS_STYLES[s] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-zinc-300">{types.join(', ') || '—'}</td>
+                    <td className="px-3 py-3 text-zinc-300">{areas.join(', ') || '—'}</td>
+                    <td className="px-3 py-3 text-zinc-300">
+                      {beds.join(', ') || '—'}
+                      {baths.length > 0 ? ` / ${baths.join(', ')}` : ''}
+                    </td>
+                    <td className="px-3 py-3 text-zinc-300">{p.sqft ? p.sqft.toLocaleString() : '—'}</td>
+                    <td className="px-3 py-3 text-zinc-300">{p.clients ? p.clients.name : '—'}</td>
+                    <td className="px-3 py-3 font-medium text-zinc-100">{p.asking_price ? `AED ${p.asking_price.toLocaleString()}` : '—'}</td>
+                    <td className="px-3 py-3 pr-5 font-medium text-zinc-100">{p.rental_income ? `AED ${p.rental_income.toLocaleString()}/yr` : '—'}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
