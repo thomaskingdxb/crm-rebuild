@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { ClientListItem, Lookup } from '@/types/database';
 import ClientCard from '@/components/ClientCard';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -23,10 +24,10 @@ export default function FollowUpsList({
   clientStatuses: Lookup[];
   activityTypes: Lookup[];
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('followUps:query', '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<Set<number>>(new Set());
-  const [selectedStatuses, setSelectedStatuses] = useState<Set<number>>(new Set());
+  const [selectedTypes, setSelectedTypes] = usePersistentState<Set<number>>('followUps:types', new Set());
+  const [selectedStatuses, setSelectedStatuses] = usePersistentState<Set<number>>('followUps:statuses', new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   function toggle(set: Set<number>, id: number, setter: (s: Set<number>) => void) {

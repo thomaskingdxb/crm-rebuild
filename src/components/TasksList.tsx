@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { TaskWithRelations, Lookup } from '@/types/database';
 import TaskCard from '@/components/TaskCard';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -17,9 +18,9 @@ export default function TasksList({
   taskTypes: Lookup[];
   clients: { id: string; name: string }[];
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('tasks:query', '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<Set<number>>(new Set());
+  const [selectedTypes, setSelectedTypes] = usePersistentState<Set<number>>('tasks:types', new Set());
 
   function toggle(id: number) {
     setSelectedTypes((prev) => {

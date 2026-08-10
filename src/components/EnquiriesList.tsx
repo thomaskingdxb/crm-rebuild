@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import type { EnquiryListItem, Lookup } from '@/types/database';
 import EnquiryCard from '@/components/EnquiryCard';
 import FilterMultiSelect from '@/components/FilterMultiSelect';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -55,7 +56,7 @@ export default function EnquiriesList({
   taskTypes: Lookup[];
   activityTypes: Lookup[];
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('enquiries:query', '');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -67,7 +68,7 @@ export default function EnquiriesList({
       return next;
     });
   }
-  const [selected, setSelected] = useState<Record<FilterKey, Set<number>>>({
+  const [selected, setSelected] = usePersistentState<Record<FilterKey, Set<number>>>('enquiries:selected', {
     enquiryType: new Set(),
     propertyType: new Set(),
     area: new Set(),

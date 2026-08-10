@@ -6,6 +6,7 @@ import type { DealWithRelations, DealStage, Lookup } from '@/types/database';
 import { dealCategory } from '@/lib/deals';
 import { moveDealStageAction } from '@/app/deals/actions';
 import DealKanbanCard from '@/components/DealKanbanCard';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -116,9 +117,9 @@ export default function DealsKanban({
     setLocalDeals(deals);
   }, [deals]);
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('deals:query', '');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedTypes, setSelectedTypes] = useState<Set<number>>(new Set());
+  const [selectedTypes, setSelectedTypes] = usePersistentState<Set<number>>('deals:types', new Set());
 
   function toggleType(id: number) {
     setSelectedTypes((prev) => {

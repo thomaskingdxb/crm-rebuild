@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { EnquiryListItem, Lookup } from '@/types/database';
 import PipelineCard from '@/components/PipelineCard';
+import { usePersistentState } from '@/lib/usePersistentState';
 
 interface EnquiryLookups {
   enquiryTypes: Lookup[];
@@ -122,7 +123,7 @@ export default function PipelineKanban({
   taskTypes: Lookup[];
   activityTypes: Lookup[];
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = usePersistentState('pipeline:query', '');
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
