@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase as defaultClient } from '@/lib/supabase/client';
+import { grossCommission } from '@/lib/deals';
 import type { Goal, Achievement } from '@/types/database';
 
 export async function getGoals(db: SupabaseClient = defaultClient): Promise<Goal[]> {
@@ -37,11 +38,17 @@ export async function getMonthlySeries(db: SupabaseClient = defaultClient): Prom
 
   const { data, error } = await db
     .from('deals')
-    .select('date_agreed, date_completed, commission_amount')
+    .select('date_agreed, date_completed, commission_amount, commission_percent, value')
     .or(`and(date_agreed.gte.${rangeStart},date_agreed.lte.${rangeEnd}),and(date_completed.gte.${rangeStart},date_completed.lte.${rangeEnd})`);
   if (error) throw error;
 
-  const rows = data as { date_agreed: string | null; date_completed: string | null; commission_amount: number | null }[];
+  const rows = data as {
+    date_agreed: string | null;
+    date_completed: string | null;
+    commission_amount: number | null;
+    commission_percent: number | null;
+    value: number | null;
+  }[];
 
   const months: MonthlyPoint[] = [];
   for (let year = rangeStartYear; year <= currentYear; year++) {
@@ -60,7 +67,7 @@ export async function getMonthlySeries(db: SupabaseClient = defaultClient): Prom
   const byKey = new Map(months.map((m) => [m.monthKey, m]));
 
   for (const row of rows) {
-    const commission = row.commission_amount ?? 0;
+    const commission = grossCommission(row) ?? 0;
     if (row.date_agreed) {
       const point = byKey.get(row.date_agreed.slice(0, 7));
       if (point) {
