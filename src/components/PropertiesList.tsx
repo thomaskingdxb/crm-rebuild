@@ -4,7 +4,8 @@ import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
 import { usePersistentState } from '@/lib/usePersistentState';
-import { exportAvailabilityPdf } from '@/lib/exportAvailabilityPdf';
+import { exportAvailabilityPdf, AVAILABILITY_COLUMNS, type AvailabilityColumnKey } from '@/lib/exportAvailabilityPdf';
+import Modal from '@/components/Modal';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -212,6 +213,15 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
   }, [filtered]);
 
   const [exporting, setExporting] = useState(false);
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [exportColumns, setExportColumns] = usePersistentState<AvailabilityColumnKey[]>(
+    'properties:exportColumns',
+    AVAILABILITY_COLUMNS.map((c) => c.key)
+  );
+
+  function toggleExportColumn(key: AvailabilityColumnKey) {
+    setExportColumns((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
+  }
 
   async function handleExport() {
     setExporting(true);
@@ -221,7 +231,8 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
         buildingNames.length === 1
           ? `${buildingNames[0]} · ${filtered.length} ${filtered.length === 1 ? 'property' : 'properties'}`
           : `${buildingNames.length} Buildings · ${filtered.length} properties`;
-      await exportAvailabilityPdf(buildingGroups, subtitle);
+      await exportAvailabilityPdf(buildingGroups, subtitle, exportColumns);
+      setExportModalOpen(false);
     } finally {
       setExporting(false);
     }
@@ -250,13 +261,40 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
         </button>
         <button
           type="button"
-          onClick={handleExport}
-          disabled={exporting || filtered.length === 0}
+          onClick={() => setExportModalOpen(true)}
+          disabled={filtered.length === 0}
           className="shrink-0 rounded-lg bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 disabled:opacity-50"
+        >
+          Export PDF
+        </button>
+      </div>
+
+      <Modal open={exportModalOpen} onClose={() => setExportModalOpen(false)} title="Export Availability PDF">
+        <p className="mb-4 text-xs text-zinc-500">
+          Choose which columns to include. Exports the {filtered.length} {filtered.length === 1 ? 'property' : 'properties'} currently matching your search/filters.
+        </p>
+        <div className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {AVAILABILITY_COLUMNS.map((c) => (
+            <label key={c.key} className="flex items-center gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm text-zinc-300">
+              <input
+                type="checkbox"
+                checked={exportColumns.includes(c.key)}
+                onChange={() => toggleExportColumn(c.key)}
+                className="h-4 w-4 rounded border-white/20 bg-white/5 text-blue-500 focus:ring-blue-500"
+              />
+              {c.label}
+            </label>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting || exportColumns.length === 0}
+          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 disabled:opacity-50"
         >
           {exporting ? 'Exporting...' : 'Export PDF'}
         </button>
-      </div>
+      </Modal>
 
       {filtersOpen && (
         <div className="mb-4 surface-card p-5 space-y-4">

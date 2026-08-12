@@ -16,20 +16,72 @@ function money(n: number | null): string {
   return n ? `AED ${n.toLocaleString()}` : '—';
 }
 
+export type AvailabilityColumnKey = 'unit' | 'layout' | 'beds' | 'floor' | 'sqft' | 'view' | 'status' | 'price' | 'rent';
+
+export const AVAILABILITY_COLUMNS: { key: AvailabilityColumnKey; label: string }[] = [
+  { key: 'unit', label: 'Unit' },
+  { key: 'layout', label: 'Layout' },
+  { key: 'beds', label: 'Beds' },
+  { key: 'floor', label: 'Floor' },
+  { key: 'sqft', label: 'Sqft' },
+  { key: 'view', label: 'View' },
+  { key: 'status', label: 'Status' },
+  { key: 'price', label: 'Price' },
+  { key: 'rent', label: 'Rent (yr)' },
+];
+
+// Relative widths — proportioned to fill whatever columns are selected.
+const COLUMN_WEIGHT: Record<AvailabilityColumnKey, number> = {
+  unit: 1.1,
+  layout: 0.9,
+  beds: 0.9,
+  floor: 0.9,
+  sqft: 1.1,
+  view: 2.2,
+  status: 1.6,
+  price: 1.8,
+  rent: 1.8,
+};
+
 interface BuildingGroup {
   building: string;
   bedroomGroups: { bedroomLabel: string; rows: PropertyWithRelations[] }[];
 }
 
-export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: string) {
+function columnValue(key: AvailabilityColumnKey, p: PropertyWithRelations): { text: string; color?: [number, number, number]; bold?: boolean } {
+  switch (key) {
+    case 'unit':
+      return { text: p.unit_number ?? '—' };
+    case 'layout':
+      return { text: p.layout ?? '—' };
+    case 'beds':
+      return { text: p.property_bedroom_counts.map((b) => b.bedroom_counts.name).join(', ') || '—' };
+    case 'floor':
+      return { text: p.floor ?? '—' };
+    case 'sqft':
+      return { text: p.sqft ? p.sqft.toLocaleString() : '—' };
+    case 'view':
+      return { text: p.property_view_types.map((v) => v.view_types.name).join(', ') || '—' };
+    case 'status': {
+      const statuses = p.property_property_statuses.map((s) => s.property_statuses.name);
+      return { text: statuses.join(', ') || '—', color: statuses.length ? STATUS_COLORS[statuses[0]] : undefined, bold: true };
+    }
+    case 'price':
+      return { text: money(p.asking_price) };
+    case 'rent':
+      return { text: money(p.rental_income) };
+  }
+}
+
+export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: string, columnKeys: AvailabilityColumnKey[]) {
   const { jsPDF } = await import('jspdf');
-  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' });
-  const pageW = 297;
-  const pageH = 210;
-  const marginX = 14;
+  const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+  const pageW = 210;
+  const pageH = 297;
+  const marginX = 16;
   const contentW = pageW - marginX * 2;
-  const bottomLimit = pageH - 22;
-  let y = 18;
+  const bottomLimit = pageH - 24;
+  let y = 20;
 
   const bg: [number, number, number] = [13, 27, 46];
   const card: [number, number, number] = [26, 45, 71];
@@ -41,23 +93,17 @@ export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: s
   const gold: [number, number, number] = [184, 145, 68];
   const goldBright: [number, number, number] = [212, 168, 83];
 
-  const cols = [
-    { label: 'Unit', w: 20 },
-    { label: 'Layout', w: 18 },
-    { label: 'Beds', w: 16 },
-    { label: 'Floor', w: 16 },
-    { label: 'Sqft', w: 20 },
-    { label: 'View', w: 45 },
-    { label: 'Status', w: 32 },
-    { label: 'Price', w: 48 },
-    { label: 'Rent (yr)', w: 48 },
-  ];
+  const activeCols = AVAILABILITY_COLUMNS.filter((c) => columnKeys.includes(c.key));
+  const totalWeight = activeCols.reduce((sum, c) => sum + COLUMN_WEIGHT[c.key], 0) || 1;
   const colX: number[] = [];
+  const colW: number[] = [];
   {
     let x = marginX;
-    for (const c of cols) {
+    for (const c of activeCols) {
+      const w = (COLUMN_WEIGHT[c.key] / totalWeight) * contentW;
       colX.push(x);
-      x += c.w;
+      colW.push(w);
+      x += w;
     }
   }
 
@@ -79,29 +125,30 @@ export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: s
     pdf.addPage();
     pdf.setFillColor(...bg);
     pdf.rect(0, 0, pageW, pageH, 'F');
-    y = 18;
+    y = 20;
     drawTableHeader();
   }
 
   function pageFooter() {
     const centerX = pageW / 2;
-    const fy = pageH - 14;
+    const fy = pageH - 15;
     pdf.setDrawColor(...borderFaint);
-    pdf.line(marginX, fy - 4, pageW - marginX, fy - 4);
+    pdf.line(marginX, fy - 5, pageW - marginX, fy - 5);
     pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(7.5);
+    pdf.setFontSize(7);
     pdf.setTextColor(...textFaint);
-    pdf.text('Thomas King · Luxury Invest Group · +971 50 167 0251 · Thomas.king@luxuryinvestgroup.com', centerX, fy, { align: 'center' });
-    pdf.text(`Page ${pdf.getNumberOfPages()}`, pageW - marginX, fy, { align: 'right' });
+    pdf.text('Thomas King · Luxury Invest Group', centerX, fy - 1, { align: 'center' });
+    pdf.text('+971 50 167 0251 · Thomas.king@luxuryinvestgroup.com', centerX, fy + 4, { align: 'center' });
+    pdf.text(`Page ${pdf.getNumberOfPages()}`, pageW - marginX, fy - 1, { align: 'right' });
   }
 
   function drawTableHeader() {
     pdf.setFillColor(...card);
     pdf.rect(marginX, y, contentW, 7, 'F');
     pdf.setFont('helvetica', 'bold');
-    pdf.setFontSize(8);
+    pdf.setFontSize(7.5);
     pdf.setTextColor(...gold);
-    cols.forEach((c, i) => {
+    activeCols.forEach((c, i) => {
       pdf.text(c.label.toUpperCase(), colX[i] + 2, y + 4.8);
     });
     y += 9;
@@ -113,24 +160,25 @@ export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: s
   pdf.rect(0, 0, pageW, pageH, 'F');
 
   if (logoDataUrl) {
-    const logoW = 26;
+    const logoW = 24;
     const logoH = logoW * (2250 / 7500);
     pdf.addImage(logoDataUrl, 'PNG', marginX, y - 6, logoW, logoH);
   }
-  y += 12;
+  y += 13;
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(18);
+  pdf.setFontSize(16);
   pdf.setTextColor(...goldBright);
   pdf.text('Property Availability', marginX, y);
   y += 6;
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(10);
+  pdf.setFontSize(9.5);
   pdf.setTextColor(...textMuted);
   pdf.text(subtitle, marginX, y);
-  pdf.setFontSize(8.5);
+  y += 4.5;
+  pdf.setFontSize(8);
   pdf.setTextColor(...textFaint);
-  pdf.text(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), pageW - marginX, y, { align: 'right' });
-  y += 9;
+  pdf.text(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), marginX, y);
+  y += 7;
 
   drawTableHeader();
 
@@ -157,32 +205,20 @@ export async function exportAvailabilityPdf(groups: BuildingGroup[], subtitle: s
       for (const p of bg2.rows) {
         if (y + rowH > bottomLimit) newPage();
 
-        const beds = p.property_bedroom_counts.map((b) => b.bedroom_counts.name).join(', ') || '—';
-        const view = p.property_view_types.map((v) => v.view_types.name).join(', ') || '—';
-        const statuses = p.property_property_statuses.map((s) => s.property_statuses.name);
-        const statusText = statuses.join(', ') || '—';
-        const statusColor = statuses.length ? (STATUS_COLORS[statuses[0]] ?? textMuted) : textFaint;
-
         pdf.setDrawColor(...borderCard);
         pdf.line(marginX, y + rowH, marginX + contentW, y + rowH);
 
         const baseline = y + rowH / 2 + 1.4;
-        pdf.setFontSize(8);
-        pdf.setTextColor(...textLight);
-        pdf.text(p.unit_number ?? '—', colX[0] + 2, baseline);
-        pdf.text(p.layout ?? '—', colX[1] + 2, baseline);
-        pdf.text(beds, colX[2] + 2, baseline);
-        pdf.text(p.floor ?? '—', colX[3] + 2, baseline);
-        pdf.text(p.sqft ? p.sqft.toLocaleString() : '—', colX[4] + 2, baseline);
-        pdf.setTextColor(...textMuted);
-        pdf.text(pdf.splitTextToSize(view, cols[5].w - 4)[0] ?? '—', colX[5] + 2, baseline);
-        pdf.setTextColor(...statusColor);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text(pdf.splitTextToSize(statusText, cols[6].w - 4)[0] ?? '—', colX[6] + 2, baseline);
+        pdf.setFontSize(7.5);
+
+        activeCols.forEach((c, i) => {
+          const { text, color, bold } = columnValue(c.key, p);
+          pdf.setFont('helvetica', bold ? 'bold' : 'normal');
+          pdf.setTextColor(...(color ?? (c.key === 'price' || c.key === 'rent' ? goldBright : c.key === 'unit' ? textLight : textMuted)));
+          const fitted = pdf.splitTextToSize(text, colW[i] - 3)[0] ?? text;
+          pdf.text(fitted, colX[i] + 2, baseline);
+        });
         pdf.setFont('helvetica', 'normal');
-        pdf.setTextColor(...goldBright);
-        pdf.text(money(p.asking_price), colX[7] + 2, baseline);
-        pdf.text(money(p.rental_income), colX[8] + 2, baseline);
 
         y += rowH;
       }
