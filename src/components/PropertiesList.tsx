@@ -83,6 +83,13 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
     bathroom: new Set(),
     view: new Set(),
   });
+  const [selectedLayouts, setSelectedLayouts] = usePersistentState<Set<string>>('properties:layouts', new Set());
+
+  const layoutOptions = useMemo(() => {
+    const values = new Set<string>();
+    for (const p of properties) if (p.layout) values.add(p.layout);
+    return Array.from(values).sort();
+  }, [properties]);
 
   function toggle(key: FilterKey, id: number) {
     setSelected((prev) => {
@@ -90,6 +97,15 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return { ...prev, [key]: next };
+    });
+  }
+
+  function toggleLayout(layout: string) {
+    setSelectedLayouts((prev) => {
+      const next = new Set(prev);
+      if (next.has(layout)) next.delete(layout);
+      else next.add(layout);
+      return next;
     });
   }
 
@@ -103,9 +119,10 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
       bathroom: new Set(),
       view: new Set(),
     });
+    setSelectedLayouts(new Set());
   }
 
-  const activeFilterCount = Object.values(selected).reduce((sum, s) => sum + s.size, 0);
+  const activeFilterCount = Object.values(selected).reduce((sum, s) => sum + s.size, 0) + selectedLayouts.size;
 
   const filtered = useMemo(() => {
     return properties.filter((p) => {
@@ -116,6 +133,7 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
           p.building,
           p.unit_number,
           p.clients?.name,
+          p.layout,
           ...p.property_areas.map((a) => a.areas.name),
           ...p.property_property_statuses.map((s) => s.property_statuses.name),
           ...p.property_property_types.map((t) => t.property_types.name),
@@ -141,9 +159,11 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
         if (selected[key].size > 0 && !ids.some((id) => selected[key].has(id))) return false;
       }
 
+      if (selectedLayouts.size > 0 && (!p.layout || !selectedLayouts.has(p.layout))) return false;
+
       return true;
     });
-  }, [properties, query, selected]);
+  }, [properties, query, selected, selectedLayouts]);
 
   // Grouped Building -> Bedrooms -> rows sorted by unit number, per the default view.
   const buildingGroups = useMemo(() => {
@@ -219,6 +239,18 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
           <FilterGroup title="Type" options={lookups.propertyTypes} selected={selected.type} onToggle={(id) => toggle('type', id)} />
           <FilterGroup title="Bedrooms" options={lookups.bedroomCounts} selected={selected.bedroom} onToggle={(id) => toggle('bedroom', id)} />
           <FilterGroup title="Bathrooms" options={lookups.bathroomCounts} selected={selected.bathroom} onToggle={(id) => toggle('bathroom', id)} />
+          {layoutOptions.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-medium text-zinc-400">Layout</p>
+              <div className="flex flex-wrap gap-2">
+                {layoutOptions.map((l) => (
+                  <button key={l} type="button" onClick={() => toggleLayout(l)} className={`${pillClass} ${selectedLayouts.has(l) ? pillActive : pillInactive}`}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <FilterGroup title="Area" options={lookups.areas} selected={selected.area} onToggle={(id) => toggle('area', id)} />
           <FilterGroup title="Developer" options={lookups.developers} selected={selected.developer} onToggle={(id) => toggle('developer', id)} />
           <FilterGroup title="View" options={lookups.viewTypes} selected={selected.view} onToggle={(id) => toggle('view', id)} />
@@ -245,6 +277,7 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
                 <th className="whitespace-nowrap px-3 py-2 pl-5 text-left text-xs font-medium text-zinc-500">Unit / Building</th>
                 <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Notes</th>
                 <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Beds / Baths</th>
+                <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Layout</th>
                 <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Status</th>
                 <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Area</th>
                 <th className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-zinc-500">Sqft</th>
@@ -258,14 +291,14 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
               {buildingGroups.map(({ building, bedroomGroups }) => (
                 <Fragment key={`building:${building}`}>
                   <tr className="border-b border-white/10 bg-white/[0.03]">
-                    <td colSpan={10} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
+                    <td colSpan={11} className="px-5 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-400">
                       {building}
                     </td>
                   </tr>
                   {bedroomGroups.map(({ bedroomLabel, rows }) => (
                     <Fragment key={`${building}:${bedroomLabel}`}>
                       <tr className="border-b border-white/5">
-                        <td colSpan={10} className="px-5 py-1.5 text-[11px] font-medium text-zinc-500">
+                        <td colSpan={11} className="px-5 py-1.5 text-[11px] font-medium text-zinc-500">
                           {bedroomLabel === 'Unspecified' ? 'Bedrooms unspecified' : `${bedroomLabel} bed`}
                         </td>
                       </tr>
@@ -291,6 +324,7 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
                               {beds.join(', ') || '—'}
                               {baths.length > 0 ? ` / ${baths.join(', ')}` : ''}
                             </td>
+                            <td className="px-3 py-3 text-zinc-300">{p.layout || '—'}</td>
                             <td className="px-3 py-3">
                               <div className="flex flex-wrap gap-1">
                                 {statuses.length === 0 && <span className="text-xs text-zinc-600">—</span>}

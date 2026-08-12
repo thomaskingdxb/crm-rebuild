@@ -159,7 +159,7 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             <SearchableMultiSelect name="view_ids" options={lookups.viewTypes} defaultSelectedIds={selectedViewIds} placeholder="Search views..." />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Sqft</label>
               <input name="sqft" type="number" step="any" defaultValue={property.sqft ?? ''} className={inputClass} />
@@ -167,6 +167,10 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             <div>
               <label className={labelClass}>Floor</label>
               <input name="floor" defaultValue={property.floor ?? ''} className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Layout</label>
+              <input name="layout" placeholder="e.g. A, B, C" defaultValue={property.layout ?? ''} className={inputClass} />
             </div>
           </div>
 

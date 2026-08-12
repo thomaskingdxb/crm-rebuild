@@ -98,6 +98,7 @@ export interface Property {
   sqft: number | null;
   service_charge: number | null;
   floor: string | null;
+  layout: string | null; // floor-plan variant within the building, e.g. 'A', 'B', 'C'
   rented_until: string | null;
   completion_date: string | null;
   rental_income: number | null;

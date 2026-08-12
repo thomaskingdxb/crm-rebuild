@@ -80,7 +80,7 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
             <SearchableMultiSelect name="view_ids" options={lookups.viewTypes} defaultSelectedIds={new Set()} placeholder="Search views..." />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Sqft</label>
               <input name="sqft" type="number" step="any" className={inputClass} />
@@ -88,6 +88,10 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
             <div>
               <label className={labelClass}>Floor</label>
               <input name="floor" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Layout</label>
+              <input name="layout" placeholder="e.g. A, B, C" className={inputClass} />
             </div>
           </div>
 

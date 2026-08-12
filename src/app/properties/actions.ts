@@ -29,6 +29,7 @@ function readPropertyForm(formData: FormData) {
     sqft: num(formData.get('sqft')),
     service_charge: num(formData.get('service_charge')),
     floor: (formData.get('floor') as string) || null,
+    layout: (formData.get('layout') as string) || null,
     rented_until: (formData.get('rented_until') as string) || null,
     completion_date: (formData.get('completion_date') as string) || null,
     rental_income: num(formData.get('rental_income')),
