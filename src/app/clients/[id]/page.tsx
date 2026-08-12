@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClient, getClientLookups, getClientActivities, getActivityTypes, getClientsBasic } from '@/lib/clients';
 import { getClientTasks, getTaskTypes } from '@/lib/tasks';
+import { getClientMemoryByClientId } from '@/lib/coaching';
 import { getClientEnquiries, getEnquiryLookups } from '@/lib/enquiries';
 import { getClientProperties, getPropertiesBasic } from '@/lib/properties';
 import { getClientDeals, getDealLookups } from '@/lib/deals';
@@ -28,7 +29,7 @@ const sectionClass = 'surface-card p-6';
 export default async function ClientProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties, enquiryLookups] = await Promise.all([
+  const [client, lookups, activities, activityTypes, tasks, taskTypes, allClients, enquiries, properties, deals, dealLookups, allProperties, enquiryLookups, whatsappMemory] = await Promise.all([
     getClient(id, supabase),
     getClientLookups(supabase),
     getClientActivities(id, supabase),
@@ -42,6 +43,7 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
     getDealLookups(supabase),
     getPropertiesBasic(supabase),
     getEnquiryLookups(supabase),
+    getClientMemoryByClientId(id, supabase),
   ]);
 
   if (!client) notFound();
@@ -271,6 +273,19 @@ export default async function ClientProfilePage({ params }: { params: Promise<{ 
               </div>
             )}
           </div>
+
+          {whatsappMemory && (
+            <div className={sectionClass}>
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-zinc-100">WhatsApp Notes</h2>
+                <Link href="/coaching" className="text-xs font-medium text-blue-400 hover:underline">
+                  View coaching →
+                </Link>
+              </div>
+              <p className="text-sm text-zinc-300">{whatsappMemory.summary}</p>
+              <p className="mt-2 text-xs text-zinc-500">Updated {new Date(whatsappMemory.updated_at).toLocaleDateString()}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

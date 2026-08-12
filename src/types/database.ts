@@ -170,3 +170,55 @@ export interface Achievement {
   achieved_date: string;
   created_at: string;
 }
+
+// WhatsApp coaching pipeline - populated by Claude Code sessions running
+// classification passes, never written to by the app itself (no live LLM
+// calls from the CRM - see project memory for the architecture decision).
+export interface WhatsappContact {
+  id: string;
+  display_name: string;
+  client_id: string | null;
+  match_status: 'matched' | 'unmatched' | 'ambiguous' | 'self';
+  created_at: string;
+}
+
+export interface CoachingFlag {
+  id: string;
+  message_id: string;
+  flag_type: 'new_enquiry' | 'task' | 'needs_response' | 'missed' | 'notable_moment';
+  note: string | null;
+  resolved: boolean;
+  suggested_resolved: boolean;
+  created_at: string;
+}
+
+export interface CoachingFlagWithContext extends CoachingFlag {
+  whatsapp_messages: {
+    id: string;
+    sender_name: string;
+    sent_at: string;
+    body: string | null;
+    conversation_id: string;
+    whatsapp_conversations: {
+      id: string;
+      contact_id: string;
+      whatsapp_contacts: WhatsappContact;
+    };
+  };
+  draft?: { id: string; draft_text: string; status: string } | null;
+  task?: { id: string; task_info: string | null } | null;
+}
+
+export interface CoachingMemory {
+  id: string;
+  contact_id: string;
+  summary: string;
+  updated_at: string;
+}
+
+export interface ContentIdea {
+  id: string;
+  source_message_id: string | null;
+  idea: string;
+  created_at: string;
+}

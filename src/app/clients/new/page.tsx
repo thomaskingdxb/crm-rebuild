@@ -8,9 +8,10 @@ const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
 const labelClass = 'block text-xs font-medium text-zinc-400 mb-1';
 
-export default async function NewClientPage() {
+export default async function NewClientPage({ searchParams }: { searchParams: Promise<{ name?: string; phone?: string }> }) {
   const supabase = await createClient();
   const { clientTypes, clientStatuses, leadSources } = await getClientLookups(supabase);
+  const { name: prefillName, phone: prefillPhone } = await searchParams;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -24,12 +25,12 @@ export default async function NewClientPage() {
         <form action={createClientAction} className="space-y-4 surface-card p-6">
           <div>
             <label className={labelClass}>Name *</label>
-            <input name="name" required className={inputClass} />
+            <input name="name" required defaultValue={prefillName ?? ''} className={inputClass} />
           </div>
 
           <div>
             <label className={labelClass}>Phone</label>
-            <input name="phone" className={inputClass} />
+            <input name="phone" defaultValue={prefillPhone ?? ''} className={inputClass} />
           </div>
 
           <div>
