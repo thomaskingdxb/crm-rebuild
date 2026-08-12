@@ -100,6 +100,31 @@ export async function getClientMemoryByClientId(clientId: string, db: SupabaseCl
   return getContactMemory(contact.id, db);
 }
 
+export interface CoachingCounts {
+  needsResponse: number;
+  openTasks: number;
+  unmatchedLeads: number;
+  newIdeas: number;
+}
+
+// Lightweight head-counts for the home dashboard summary - avoids pulling
+// full joined rows just to show a number.
+export async function getCoachingCounts(db: SupabaseClient = defaultClient): Promise<CoachingCounts> {
+  const [needsResponse, openTasks, unmatchedLeads, newIdeas] = await Promise.all([
+    db.from('coaching_flags').select('id', { count: 'exact', head: true }).eq('flag_type', 'needs_response').eq('resolved', false).eq('suggested_resolved', false),
+    db.from('coaching_flags').select('id', { count: 'exact', head: true }).in('flag_type', ['task', 'missed']).eq('resolved', false),
+    db.from('whatsapp_contacts').select('id', { count: 'exact', head: true }).eq('match_status', 'unmatched'),
+    db.from('content_ideas').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+  ]);
+
+  return {
+    needsResponse: needsResponse.count ?? 0,
+    openTasks: openTasks.count ?? 0,
+    unmatchedLeads: unmatchedLeads.count ?? 0,
+    newIdeas: newIdeas.count ?? 0,
+  };
+}
+
 export async function getLastCoachingPassAt(db: SupabaseClient = defaultClient): Promise<string | null> {
   const { data, error } = await db
     .from('whatsapp_conversations')

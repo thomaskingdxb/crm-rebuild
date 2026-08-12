@@ -2,6 +2,7 @@ import type React from 'react';
 import Link from 'next/link';
 import { getDashboardStats } from '@/lib/dashboard';
 import { getGoals, getMonthlySeries } from '@/lib/kpis';
+import { getCoachingCounts } from '@/lib/coaching';
 import { createClient } from '@/lib/supabase/server';
 import KpiChart from '@/components/KpiChart';
 
@@ -67,6 +68,20 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M19 5 5 19" />
       <circle cx="6.5" cy="6.5" r="2.5" />
       <circle cx="17.5" cy="17.5" r="2.5" />
+    </svg>
+  ),
+  coaching: (
+    <svg {...iconProps}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+      <path d="M8 9h8M8 13h5" />
+    </svg>
+  ),
+  social: (
+    <svg {...iconProps}>
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4" />
     </svg>
   ),
 };
@@ -254,7 +269,12 @@ function dubaiDate(): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [stats, goals, series] = await Promise.all([getDashboardStats(supabase), getGoals(supabase), getMonthlySeries(supabase)]);
+  const [stats, goals, series, coaching] = await Promise.all([
+    getDashboardStats(supabase),
+    getGoals(supabase),
+    getMonthlySeries(supabase),
+    getCoachingCounts(supabase),
+  ]);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -303,6 +323,23 @@ export default async function DashboardPage() {
             netCompleted={stats.dealStats.commissionNet}
             grossPending={stats.dealStats.commissionGrossPending}
             netPending={stats.dealStats.commissionNetPending}
+          />
+          <SplitStatCard
+            href="/coaching"
+            icon="coaching"
+            title="Coaching"
+            left={`${coaching.needsResponse}`}
+            leftLabel="Needs Response"
+            right={`${coaching.openTasks}`}
+            rightLabel="Open Tasks"
+          />
+          <StatCard
+            href="/social"
+            icon="social"
+            title="Content Ideas"
+            value={`${coaching.newIdeas}`}
+            valueClassName="text-blue-300"
+            sub={coaching.unmatchedLeads > 0 ? `${coaching.unmatchedLeads} new WhatsApp lead${coaching.unmatchedLeads === 1 ? '' : 's'} unmatched` : undefined}
           />
         </div>
 
