@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
 import { usePersistentState } from '@/lib/usePersistentState';
+import { exportAvailabilityPdf } from '@/lib/exportAvailabilityPdf';
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -210,6 +211,22 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
     });
   }, [filtered]);
 
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const buildingNames = buildingGroups.map((g) => g.building);
+      const subtitle =
+        buildingNames.length === 1
+          ? `${buildingNames[0]} · ${filtered.length} ${filtered.length === 1 ? 'property' : 'properties'}`
+          : `${buildingNames.length} Buildings · ${filtered.length} properties`;
+      await exportAvailabilityPdf(buildingGroups, subtitle);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div>
       <div className="mb-4 flex gap-2">
@@ -230,6 +247,14 @@ export default function PropertiesList({ properties, lookups }: { properties: Pr
           }`}
         >
           Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+        </button>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={exporting || filtered.length === 0}
+          className="shrink-0 rounded-lg bg-white/5 px-4 py-2.5 text-sm font-medium text-zinc-300 ring-1 ring-inset ring-white/10 transition hover:ring-white/20 disabled:opacity-50"
+        >
+          {exporting ? 'Exporting...' : 'Export PDF'}
         </button>
       </div>
 
