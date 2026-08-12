@@ -4,11 +4,11 @@ import {
   getSuggestedResolvedFlags,
   getOpenTaskFlags,
   getUnmatchedContacts,
-  getContentIdeas,
+  getContentIdeasByStatus,
   getLastCoachingPassAt,
 } from '@/lib/coaching';
 import { createClient } from '@/lib/supabase/server';
-import { resolveFlagAction, dismissContentIdeaAction } from '@/app/coaching/actions';
+import { resolveFlagAction } from '@/app/coaching/actions';
 import type { CoachingFlagWithContext } from '@/types/database';
 
 const sectionClass = 'surface-card p-6';
@@ -78,7 +78,7 @@ export default async function CoachingPage() {
     getSuggestedResolvedFlags(supabase),
     getOpenTaskFlags(supabase),
     getUnmatchedContacts(supabase),
-    getContentIdeas(supabase),
+    getContentIdeasByStatus('new', supabase),
     getLastCoachingPassAt(supabase),
   ]);
 
@@ -162,23 +162,12 @@ export default async function CoachingPage() {
           </div>
 
           <div className={sectionClass}>
-            <h2 className="mb-4 text-sm font-semibold text-zinc-100">Content Ideas ({contentIdeas.length})</h2>
-            {contentIdeas.length === 0 ? (
-              <p className="text-sm text-zinc-500">No content ideas yet.</p>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {contentIdeas.map((idea) => (
-                  <div key={idea.id} className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-4 ring-1 ring-inset ring-white/10">
-                    <p className="text-sm text-zinc-300">{idea.idea}</p>
-                    <form action={dismissContentIdeaAction.bind(null, idea.id)}>
-                      <button type="submit" className="shrink-0 text-xs text-zinc-500 hover:text-rose-400">
-                        Dismiss
-                      </button>
-                    </form>
-                  </div>
-                ))}
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-zinc-100">Content Ideas ({contentIdeas.length} new)</h2>
+              <Link href="/social" className="text-xs font-medium text-blue-400 hover:underline">
+                Open Social dashboard →
+              </Link>
+            </div>
           </div>
         </div>
       </div>

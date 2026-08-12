@@ -220,5 +220,8 @@ export interface ContentIdea {
   id: string;
   source_message_id: string | null;
   idea: string;
+  draft_copy: string | null;
+  status: 'new' | 'posted' | 'dismissed';
+  posted_at: string | null;
   created_at: string;
 }

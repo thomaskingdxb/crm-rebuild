@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
   { label: 'Coaching', href: '/coaching', available: true },
+  { label: 'Social', href: '/social', available: true },
   { label: 'KPIs', href: '/kpis', available: true },
   { label: 'Calculators', href: '/calculators', available: true },
 ];

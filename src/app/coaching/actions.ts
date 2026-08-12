@@ -30,10 +30,3 @@ export async function resolveFlagAction(flagId: string) {
   revalidatePath('/coaching');
   revalidatePath('/tasks');
 }
-
-export async function dismissContentIdeaAction(ideaId: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('content_ideas').delete().eq('id', ideaId);
-  if (error) throw error;
-  revalidatePath('/coaching');
-}

@@ -73,8 +73,12 @@ export async function getUnmatchedContacts(db: SupabaseClient = defaultClient): 
   return data as WhatsappContact[];
 }
 
-export async function getContentIdeas(db: SupabaseClient = defaultClient): Promise<ContentIdea[]> {
-  const { data, error } = await db.from('content_ideas').select('*').order('created_at', { ascending: false });
+export async function getContentIdeasByStatus(status: ContentIdea['status'], db: SupabaseClient = defaultClient): Promise<ContentIdea[]> {
+  const { data, error } = await db
+    .from('content_ideas')
+    .select('*')
+    .eq('status', status)
+    .order(status === 'new' ? 'created_at' : 'posted_at', { ascending: status !== 'new' ? false : true });
   if (error) throw error;
   return data as ContentIdea[];
 }
