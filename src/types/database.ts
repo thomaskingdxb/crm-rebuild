@@ -216,6 +216,43 @@ export interface CoachingMemory {
   updated_at: string;
 }
 
+// Monthly market newsletter - built from a Claude Code/Cowork session (curated
+// news via web search, transaction stats read live from DXB Interact with the
+// user logged into their own account), the CRM only displays/tracks it.
+export interface NewsletterEdition {
+  id: string;
+  period_label: string; // e.g. 'August 2026'
+  headline: string | null;
+  insights_text: string | null;
+  status: 'draft' | 'sent';
+  created_at: string;
+}
+
+export interface NewsletterArticle {
+  id: string;
+  edition_id: string;
+  headline: string;
+  summary: string;
+  source_name: string;
+  source_url: string | null;
+  display_order: number;
+  created_at: string;
+}
+
+export interface NewsletterTransactionStat {
+  id: string;
+  edition_id: string;
+  category: string; // e.g. 'Flats', 'Villas', 'Hotel Apartments & Rooms', 'Commercial'
+  segment: 'off_plan' | 'ready';
+  value_aed: number | null;
+  share_pct: number | null;
+}
+
+export interface NewsletterEditionWithContent extends NewsletterEdition {
+  newsletter_articles: NewsletterArticle[];
+  newsletter_transaction_stats: NewsletterTransactionStat[];
+}
+
 export interface ContentIdea {
   id: string;
   source_message_id: string | null;
