@@ -42,4 +42,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-whatsapp-exports/
+whatsapp-exports/incoming/
+whatsapp-exports/extracted/
+whatsapp-exports/sql-chunks/
+whatsapp-exports/load.sql
+whatsapp-exports/summary.json
