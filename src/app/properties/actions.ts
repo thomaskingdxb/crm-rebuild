@@ -36,6 +36,7 @@ function readPropertyForm(formData: FormData) {
     asking_price: num(formData.get('asking_price')),
     op: num(formData.get('op')),
     notes: (formData.get('notes') as string) || null,
+    listing_status_id: num(formData.get('listing_status_id')),
   };
 }
 

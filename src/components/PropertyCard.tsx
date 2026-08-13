@@ -7,9 +7,17 @@ const STATUS_STYLES: Record<string, string> = {
   'For rent': 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
   'For sale': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
   Vacant: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
-  'Property listed': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
   'Off plan': 'bg-white/5 text-zinc-400 ring-white/10',
   Ready: 'bg-white/5 text-zinc-400 ring-white/10',
+};
+
+const LISTING_STATUS_STYLES: Record<string, string> = {
+  'Property Listed': 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+  Exclusive: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
+  'Pocket Listing': 'bg-amber-500/10 text-amber-400 ring-amber-500/20',
+  'Not Listed': 'bg-white/5 text-zinc-400 ring-white/10',
+  Withdrawn: 'bg-rose-500/10 text-rose-400 ring-rose-500/20',
+  'Listing Expired': 'bg-rose-500/10 text-rose-400 ring-rose-500/20',
 };
 
 export default function PropertyCard({ property }: { property: PropertyWithRelations }) {
@@ -37,6 +45,11 @@ export default function PropertyCard({ property }: { property: PropertyWithRelat
               {s}
             </span>
           ))}
+          {property.listing_statuses && (
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${LISTING_STATUS_STYLES[property.listing_statuses.name] ?? 'bg-white/5 text-zinc-400 ring-white/10'}`}>
+              {property.listing_statuses.name}
+            </span>
+          )}
         </div>
         {property.asking_price && <p className="font-bold text-white">AED {property.asking_price.toLocaleString()}</p>}
         {property.rental_income && <p className="font-bold text-white">AED {property.rental_income.toLocaleString()}/yr</p>}

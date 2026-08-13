@@ -6,7 +6,6 @@ const STATUS_COLORS: Record<string, [number, number, number]> = {
   'For rent': [251, 146, 60],
   'For sale': [52, 211, 153],
   Vacant: [251, 146, 60],
-  'Property listed': [52, 211, 153],
   'Off plan': [148, 163, 184],
   Ready: [148, 163, 184],
   'End user': [148, 163, 184],

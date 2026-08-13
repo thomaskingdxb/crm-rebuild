@@ -10,6 +10,7 @@ const PROPERTY_SELECT = `*,
   property_bathroom_counts ( bathroom_counts ( id, name, display_order ) ),
   property_developers ( developers ( id, name, display_order ) ),
   property_view_types ( view_types ( id, name, display_order ) ),
+  listing_statuses ( id, name, display_order ),
   clients ( id, name )`;
 
 export async function getPropertiesBasic(
@@ -64,7 +65,7 @@ export async function getClientProperties(clientId: string, db: SupabaseClient =
 }
 
 export async function getPropertyLookups(db: SupabaseClient = defaultClient) {
-  const [types, statuses, areas, bedrooms, bathrooms, developers, views] = await Promise.all([
+  const [types, statuses, areas, bedrooms, bathrooms, developers, views, listingStatuses] = await Promise.all([
     db.from('property_types').select('*').order('display_order'),
     db.from('property_statuses').select('*').order('display_order'),
     db.from('areas').select('*').order('display_order'),
@@ -72,9 +73,10 @@ export async function getPropertyLookups(db: SupabaseClient = defaultClient) {
     db.from('bathroom_counts').select('*').order('display_order'),
     db.from('developers').select('*').order('display_order'),
     db.from('view_types').select('*').order('display_order'),
+    db.from('listing_statuses').select('*').order('display_order'),
   ]);
 
-  for (const r of [types, statuses, areas, bedrooms, bathrooms, developers, views]) {
+  for (const r of [types, statuses, areas, bedrooms, bathrooms, developers, views, listingStatuses]) {
     if (r.error) throw r.error;
   }
 
@@ -86,6 +88,7 @@ export async function getPropertyLookups(db: SupabaseClient = defaultClient) {
     bathroomCounts: bathrooms.data as Lookup[],
     developers: developers.data as Lookup[],
     viewTypes: views.data as Lookup[],
+    listingStatuses: listingStatuses.data as Lookup[],
   };
 }
 

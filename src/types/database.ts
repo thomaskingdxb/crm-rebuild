@@ -104,6 +104,7 @@ export interface Property {
   rental_income: number | null;
   asking_price: number | null;
   op: number | null;
+  listing_status_id: number | null; // separate from property_statuses - marketing/listing arrangement, never shown to clients (e.g. in PDF exports)
 }
 
 export interface PropertyWithRelations extends Property {
@@ -114,6 +115,7 @@ export interface PropertyWithRelations extends Property {
   property_bathroom_counts: { bathroom_counts: Lookup }[];
   property_developers: { developers: Lookup }[];
   property_view_types: { view_types: Lookup }[];
+  listing_statuses: Lookup | null;
   clients: { id: string; name: string } | null;
 }
 

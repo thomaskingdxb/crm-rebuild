@@ -135,6 +135,16 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
           </div>
 
           <div>
+            <label className={labelClass}>Listing status</label>
+            <select name="listing_status_id" defaultValue={property.listing_status_id ?? ''} className={inputClass}>
+              <option value="">—</option>
+              {lookups.listingStatuses.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <span className={labelClass}>Area</span>
             <SearchableMultiSelect name="area_ids" options={lookups.areas} defaultSelectedIds={selectedAreaIds} placeholder="Search areas..." />
           </div>

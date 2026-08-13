@@ -56,6 +56,16 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
           </div>
 
           <div>
+            <label className={labelClass}>Listing status</label>
+            <select name="listing_status_id" defaultValue="" className={inputClass}>
+              <option value="">—</option>
+              {lookups.listingStatuses.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <span className={labelClass}>Area</span>
             <SearchableMultiSelect name="area_ids" options={lookups.areas} defaultSelectedIds={new Set()} placeholder="Search areas..." />
           </div>
