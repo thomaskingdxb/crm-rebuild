@@ -328,8 +328,8 @@ export default async function DashboardPage() {
             href="/coaching"
             icon="coaching"
             title="Coaching"
-            left={`${coaching.needsResponse}`}
-            leftLabel="Needs Response"
+            left={`${coaching.overdueCommitments > 0 ? coaching.overdueCommitments : coaching.needsResponse}`}
+            leftLabel={coaching.overdueCommitments > 0 ? 'Overdue' : 'Needs Response'}
             right={`${coaching.openTasks}`}
             rightLabel="Open Tasks"
           />

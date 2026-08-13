@@ -185,8 +185,9 @@ export interface WhatsappContact {
 export interface CoachingFlag {
   id: string;
   message_id: string;
-  flag_type: 'new_enquiry' | 'task' | 'needs_response' | 'missed' | 'notable_moment';
+  flag_type: 'new_enquiry' | 'task' | 'needs_response' | 'missed' | 'notable_moment' | 'commitment';
   note: string | null;
+  due_date: string | null; // set for 'commitment' flags - a stated/implied promise deadline
   resolved: boolean;
   suggested_resolved: boolean;
   created_at: string;

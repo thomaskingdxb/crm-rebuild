@@ -31,15 +31,49 @@ export async function getSuggestedResolvedFlags(db: SupabaseClient = defaultClie
   return attachDraftsAndTasks(data as unknown as CoachingFlagWithContext[], db);
 }
 
+// Fetches all open task/missed/commitment flags. Callers split overdue
+// commitments out for priority display - see splitByUrgency below.
 export async function getOpenTaskFlags(db: SupabaseClient = defaultClient): Promise<CoachingFlagWithContext[]> {
   const { data, error } = await db
     .from('coaching_flags')
     .select(FLAG_SELECT)
-    .in('flag_type', ['task', 'missed'])
+    .in('flag_type', ['task', 'missed', 'commitment'])
     .eq('resolved', false)
+    .order('due_date', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true });
   if (error) throw error;
   return attachDraftsAndTasks(data as unknown as CoachingFlagWithContext[], db);
+}
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Overdue commitments (a stated promise whose deadline has passed) are the
+// highest-priority item in the daily briefing - split out for a dedicated
+// section rather than sitting in the general open-tasks list.
+export function splitByUrgency(flags: CoachingFlagWithContext[]): {
+  overdueCommitments: CoachingFlagWithContext[];
+  otherOpen: CoachingFlagWithContext[];
+} {
+  const today = todayIso();
+  const overdueCommitments: CoachingFlagWithContext[] = [];
+  const otherOpen: CoachingFlagWithContext[] = [];
+  for (const f of flags) {
+    if (f.flag_type === 'commitment' && f.due_date && f.due_date < today) {
+      overdueCommitments.push(f);
+    } else {
+      otherOpen.push(f);
+    }
+  }
+  overdueCommitments.sort((a, b) => (a.due_date ?? '').localeCompare(b.due_date ?? ''));
+  return { overdueCommitments, otherOpen };
+}
+
+export function daysOverdue(dueDate: string): number {
+  const due = new Date(dueDate + 'T00:00:00Z').getTime();
+  const today = new Date(todayIso() + 'T00:00:00Z').getTime();
+  return Math.round((today - due) / 86_400_000);
 }
 
 async function attachDraftsAndTasks(flags: CoachingFlagWithContext[], db: SupabaseClient): Promise<CoachingFlagWithContext[]> {
@@ -101,6 +135,7 @@ export async function getClientMemoryByClientId(clientId: string, db: SupabaseCl
 }
 
 export interface CoachingCounts {
+  overdueCommitments: number;
   needsResponse: number;
   openTasks: number;
   unmatchedLeads: number;
@@ -110,14 +145,16 @@ export interface CoachingCounts {
 // Lightweight head-counts for the home dashboard summary - avoids pulling
 // full joined rows just to show a number.
 export async function getCoachingCounts(db: SupabaseClient = defaultClient): Promise<CoachingCounts> {
-  const [needsResponse, openTasks, unmatchedLeads, newIdeas] = await Promise.all([
+  const [overdueCommitments, needsResponse, openTasks, unmatchedLeads, newIdeas] = await Promise.all([
+    db.from('coaching_flags').select('id', { count: 'exact', head: true }).eq('flag_type', 'commitment').eq('resolved', false).lt('due_date', todayIso()),
     db.from('coaching_flags').select('id', { count: 'exact', head: true }).eq('flag_type', 'needs_response').eq('resolved', false).eq('suggested_resolved', false),
-    db.from('coaching_flags').select('id', { count: 'exact', head: true }).in('flag_type', ['task', 'missed']).eq('resolved', false),
+    db.from('coaching_flags').select('id', { count: 'exact', head: true }).in('flag_type', ['task', 'missed', 'commitment']).eq('resolved', false),
     db.from('whatsapp_contacts').select('id', { count: 'exact', head: true }).eq('match_status', 'unmatched'),
     db.from('content_ideas').select('id', { count: 'exact', head: true }).eq('status', 'new'),
   ]);
 
   return {
+    overdueCommitments: overdueCommitments.count ?? 0,
     needsResponse: needsResponse.count ?? 0,
     openTasks: openTasks.count ?? 0,
     unmatchedLeads: unmatchedLeads.count ?? 0,

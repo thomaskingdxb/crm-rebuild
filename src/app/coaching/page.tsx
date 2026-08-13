@@ -6,6 +6,8 @@ import {
   getUnmatchedContacts,
   getContentIdeasByStatus,
   getLastCoachingPassAt,
+  splitByUrgency,
+  daysOverdue,
 } from '@/lib/coaching';
 import { createClient } from '@/lib/supabase/server';
 import { resolveFlagAction } from '@/app/coaching/actions';
@@ -25,22 +27,30 @@ function timeAgo(iso: string | null) {
 function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext; showConfirm?: boolean }) {
   const msg = flag.whatsapp_messages;
   const contact = msg.whatsapp_conversations.whatsapp_contacts;
+  const overdue = flag.flag_type === 'commitment' && flag.due_date ? daysOverdue(flag.due_date) : null;
 
   return (
-    <div className="rounded-lg bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+    <div className={`rounded-lg p-4 ring-1 ring-inset ${overdue !== null && overdue > 0 ? 'bg-rose-500/5 ring-rose-500/20' : 'bg-white/5 ring-white/10'}`}>
       <div className="mb-2 flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-zinc-100">{contact.display_name}</p>
           <p className="text-xs text-zinc-500">{new Date(msg.sent_at).toLocaleString()}</p>
         </div>
-        <form action={resolveFlagAction.bind(null, flag.id)}>
-          <button
-            type="submit"
-            className="shrink-0 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
-          >
-            {showConfirm ? 'Confirm resolved' : 'Mark resolved'}
-          </button>
-        </form>
+        <div className="flex shrink-0 items-center gap-2">
+          {overdue !== null && overdue > 0 && (
+            <span className="rounded-full bg-rose-500/15 px-2 py-1 text-[10px] font-semibold text-rose-400">
+              {overdue}d overdue
+            </span>
+          )}
+          <form action={resolveFlagAction.bind(null, flag.id)}>
+            <button
+              type="submit"
+              className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+            >
+              {showConfirm ? 'Confirm resolved' : 'Mark resolved'}
+            </button>
+          </form>
+        </div>
       </div>
 
       <p className="mb-2 rounded-md bg-black/20 p-2 text-sm text-zinc-300">&ldquo;{msg.body}&rdquo;</p>
@@ -73,7 +83,7 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
 
 export default async function CoachingPage() {
   const supabase = await createClient();
-  const [needsResponse, suggestedResolved, openTasks, unmatched, contentIdeas, lastPass] = await Promise.all([
+  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass] = await Promise.all([
     getOpenNeedsResponseFlags(supabase),
     getSuggestedResolvedFlags(supabase),
     getOpenTaskFlags(supabase),
@@ -81,6 +91,7 @@ export default async function CoachingPage() {
     getContentIdeasByStatus('new', supabase),
     getLastCoachingPassAt(supabase),
   ]);
+  const { overdueCommitments, otherOpen } = splitByUrgency(allOpenTasks);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -93,6 +104,20 @@ export default async function CoachingPage() {
         </div>
 
         <div className="space-y-6">
+          {overdueCommitments.length > 0 && (
+            <div className="surface-card border border-rose-500/20 p-6">
+              <h2 className="mb-1 text-sm font-semibold text-rose-400">⚠ Overdue Commitments ({overdueCommitments.length})</h2>
+              <p className="mb-4 text-xs text-zinc-500">
+                Things you said you&apos;d do by a specific time that haven&apos;t happened yet — highest priority.
+              </p>
+              <div className="flex flex-col gap-4">
+                {overdueCommitments.map((f) => (
+                  <FlagCard key={f.id} flag={f} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className={sectionClass}>
             <h2 className="mb-4 text-sm font-semibold text-zinc-100">Needs Response ({needsResponse.length})</h2>
             {needsResponse.length === 0 ? (
@@ -124,16 +149,16 @@ export default async function CoachingPage() {
 
           <div className={sectionClass}>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-zinc-100">Open Tasks & Missed Leads ({openTasks.length})</h2>
+              <h2 className="text-sm font-semibold text-zinc-100">Open Tasks & Missed Leads ({otherOpen.length})</h2>
               <Link href="/tasks" className="text-xs font-medium text-blue-400 hover:underline">
                 View all tasks →
               </Link>
             </div>
-            {openTasks.length === 0 ? (
+            {otherOpen.length === 0 ? (
               <p className="text-sm text-zinc-500">Nothing outstanding.</p>
             ) : (
               <div className="flex flex-col gap-4">
-                {openTasks.map((f) => (
+                {otherOpen.map((f) => (
                   <FlagCard key={f.id} flag={f} />
                 ))}
               </div>
