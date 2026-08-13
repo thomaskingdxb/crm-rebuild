@@ -94,6 +94,23 @@ export async function updatePropertyAction(id: string, formData: FormData) {
   redirect(`/properties/${id}`);
 }
 
+export async function markListingUpdateSentAction(propertyId: string, ownerId: string | null) {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabase.from('properties').update({ last_update_sent_date: today }).eq('id', propertyId);
+  if (error) throw error;
+
+  if (ownerId) {
+    const { error: clientErr } = await supabase.from('clients').update({ last_contact_date: today }).eq('id', ownerId);
+    if (clientErr) throw clientErr;
+  }
+
+  revalidatePath('/coaching');
+  revalidatePath('/properties');
+  revalidatePath(`/properties/${propertyId}`);
+}
+
 export async function deletePropertyAction(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('properties').delete().eq('id', id);

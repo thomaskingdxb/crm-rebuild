@@ -11,6 +11,8 @@ import {
 } from '@/lib/coaching';
 import { createClient } from '@/lib/supabase/server';
 import { resolveFlagAction } from '@/app/coaching/actions';
+import { getListingUpdatesDue } from '@/lib/properties';
+import { markListingUpdateSentAction } from '@/app/properties/actions';
 import type { CoachingFlagWithContext } from '@/types/database';
 
 const sectionClass = 'surface-card p-6';
@@ -83,13 +85,14 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
 
 export default async function CoachingPage() {
   const supabase = await createClient();
-  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass] = await Promise.all([
+  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass, listingUpdatesDue] = await Promise.all([
     getOpenNeedsResponseFlags(supabase),
     getSuggestedResolvedFlags(supabase),
     getOpenTaskFlags(supabase),
     getUnmatchedContacts(supabase),
     getContentIdeasByStatus('new', supabase),
     getLastCoachingPassAt(supabase),
+    getListingUpdatesDue(supabase),
   ]);
   const { overdueCommitments, otherOpen } = splitByUrgency(allOpenTasks);
 
@@ -113,6 +116,44 @@ export default async function CoachingPage() {
               <div className="flex flex-col gap-4">
                 {overdueCommitments.map((f) => (
                   <FlagCard key={f.id} flag={f} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {listingUpdatesDue.length > 0 && (
+            <div className="surface-card border border-amber-500/20 p-6">
+              <h2 className="mb-1 text-sm font-semibold text-amber-400">📋 Weekly Listing Updates Due ({listingUpdatesDue.length})</h2>
+              <p className="mb-4 text-xs text-zinc-500">
+                Active listings owed a recurring update — owners hear nothing from you otherwise.
+              </p>
+              <div className="flex flex-col gap-3">
+                {listingUpdatesDue.map((l) => (
+                  <div key={l.property_id} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">
+                        {l.owner_name ?? 'No owner'} — {l.building} {l.unit_number}
+                      </p>
+                      <p className="text-xs text-zinc-500">
+                        {l.listing_status} · {l.days_since_update === null ? 'no update on record' : `${l.days_since_update}d since last update`}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {l.owner_id && (
+                        <Link href={`/clients/${l.owner_id}`} className="text-xs text-blue-400 hover:underline">
+                          View client
+                        </Link>
+                      )}
+                      <form action={markListingUpdateSentAction.bind(null, l.property_id, l.owner_id)}>
+                        <button
+                          type="submit"
+                          className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+                        >
+                          Mark update sent
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

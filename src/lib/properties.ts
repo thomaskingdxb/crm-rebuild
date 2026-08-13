@@ -92,6 +92,57 @@ export async function getPropertyLookups(db: SupabaseClient = defaultClient) {
   };
 }
 
+export interface ListingUpdateDue {
+  property_id: string;
+  building: string | null;
+  unit_number: string | null;
+  listing_status: string;
+  owner_id: string | null;
+  owner_name: string | null;
+  last_update_sent_date: string | null;
+  days_since_update: number | null; // null = never sent
+}
+
+// Fully live-computed, not a stored task - a listed property with no update
+// in 7+ days always shows up here automatically, no re-generation needed.
+export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): Promise<ListingUpdateDue[]> {
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
+
+  // "Actively marketed" = owner is owed a recurring update. Resolved by name
+  // rather than hardcoded IDs so re-seeding the lookup table can't silently
+  // break this.
+  const { data: activeStatuses, error: statusErr } = await db
+    .from('listing_statuses')
+    .select('id')
+    .in('name', ['Property Listed', 'Exclusive', 'Pocket Listing']);
+  if (statusErr) throw statusErr;
+  const activeStatusIds = (activeStatuses ?? []).map((s) => s.id);
+  if (activeStatusIds.length === 0) return [];
+
+  const { data, error } = await db
+    .from('properties')
+    .select('id, building, unit_number, last_update_sent_date, owner_id, listing_statuses ( name ), clients ( name )')
+    .in('listing_status_id', activeStatusIds)
+    .or(`last_update_sent_date.is.null,last_update_sent_date.lte.${sevenDaysAgo}`);
+  if (error) throw error;
+
+  const today = Date.now();
+  return (data ?? [])
+    .map((p) => ({
+      property_id: p.id,
+      building: p.building,
+      unit_number: p.unit_number,
+      listing_status: (p.listing_statuses as unknown as { name: string }).name,
+      owner_id: p.owner_id,
+      owner_name: (p.clients as unknown as { name: string } | null)?.name ?? null,
+      last_update_sent_date: p.last_update_sent_date,
+      days_since_update: p.last_update_sent_date
+        ? Math.floor((today - new Date(p.last_update_sent_date).getTime()) / 86_400_000)
+        : null,
+    }))
+    .sort((a, b) => (b.days_since_update ?? 999) - (a.days_since_update ?? 999));
+}
+
 export async function generateNextPropertyId(db: SupabaseClient = defaultClient): Promise<string> {
   const { data, error } = await db.from('properties').select('id');
   if (error) throw error;
