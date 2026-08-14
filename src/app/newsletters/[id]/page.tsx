@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation';
-import { getNewsletterEdition } from '@/lib/newsletters';
+import { getNewsletterEdition, getPriorEdition } from '@/lib/newsletters';
 import { createClient } from '@/lib/supabase/server';
 import {
   updateEditionAction,
@@ -27,6 +27,12 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
   const supabase = await createClient();
   const edition = await getNewsletterEdition(id, supabase);
   if (!edition) notFound();
+  const priorEdition = await getPriorEdition(id, supabase);
+
+  const luxuryChangePct =
+    edition.luxury_sales_value_aed && priorEdition?.luxury_sales_value_aed
+      ? ((edition.luxury_sales_value_aed - priorEdition.luxury_sales_value_aed) / priorEdition.luxury_sales_value_aed) * 100
+      : null;
 
   const updateWithId = updateEditionAction.bind(null, id);
   const addArticleWithId = addArticleAction.bind(null, id);
@@ -72,6 +78,22 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
             <label className={labelClass}>Market Insights &amp; Outlook</label>
             <textarea name="insights_text" defaultValue={edition.insights_text ?? ''} rows={6} className={inputClass} />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={labelClass}>Luxury market (AED 36.7M+) — total sales value</label>
+              <input name="luxury_sales_value_aed" type="number" step="0.01" defaultValue={edition.luxury_sales_value_aed ?? ''} placeholder="AED millions" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Luxury market — deal count</label>
+              <input name="luxury_deal_count" type="number" defaultValue={edition.luxury_deal_count ?? ''} placeholder="Number of deals" className={inputClass} />
+            </div>
+          </div>
+          {luxuryChangePct !== null && priorEdition && (
+            <p className="text-xs text-zinc-500">
+              {luxuryChangePct >= 0 ? '↑' : '↓'} {Math.abs(luxuryChangePct).toFixed(1)}% vs {priorEdition.period_label}
+            </p>
+          )}
+
           <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
             Save
           </button>

@@ -22,3 +22,25 @@ export async function getNewsletterEdition(id: string, db: SupabaseClient = defa
   edition.newsletter_articles.sort((a, b) => a.display_order - b.display_order);
   return edition;
 }
+
+// The edition immediately before this one (by creation order) - used to show
+// real month-over-month change on the Luxury Market section instead of
+// guessing at a % figure.
+export async function getPriorEdition(currentEditionId: string, db: SupabaseClient = defaultClient): Promise<NewsletterEdition | null> {
+  const { data: current, error: curErr } = await db
+    .from('newsletter_editions')
+    .select('created_at')
+    .eq('id', currentEditionId)
+    .single();
+  if (curErr) throw curErr;
+
+  const { data, error } = await db
+    .from('newsletter_editions')
+    .select('*')
+    .lt('created_at', current.created_at)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data as NewsletterEdition | null;
+}

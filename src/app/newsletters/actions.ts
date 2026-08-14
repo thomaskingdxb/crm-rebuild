@@ -22,6 +22,8 @@ export async function updateEditionAction(editionId: string, formData: FormData)
     .update({
       headline: (formData.get('headline') as string) || null,
       insights_text: (formData.get('insights_text') as string) || null,
+      luxury_sales_value_aed: Number(formData.get('luxury_sales_value_aed')) || null,
+      luxury_deal_count: Number(formData.get('luxury_deal_count')) || null,
     })
     .eq('id', editionId);
   if (error) throw error;

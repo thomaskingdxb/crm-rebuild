@@ -227,6 +227,8 @@ export interface NewsletterEdition {
   period_label: string; // e.g. 'August 2026'
   headline: string | null;
   insights_text: string | null;
+  luxury_sales_value_aed: number | null; // ultra-prime ($10M+/AED 36.7M+) total sales value for the month
+  luxury_deal_count: number | null;
   status: 'draft' | 'sent';
   created_at: string;
 }
