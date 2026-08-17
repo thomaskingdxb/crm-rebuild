@@ -3,6 +3,7 @@ import { getClientLookups } from '@/lib/clients';
 import { createClientAction } from '@/app/clients/actions';
 import { createClient } from '@/lib/supabase/server';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
+import SubmitButton from '@/components/SubmitButton';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -80,9 +81,9 @@ export default async function NewClientPage({ searchParams }: { searchParams: Pr
             <textarea name="notes" rows={3} className={inputClass} />
           </div>
 
-          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+          <SubmitButton pendingText="Saving..." className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
             Save Client
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>
