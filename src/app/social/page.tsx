@@ -1,6 +1,7 @@
 import { getContentIdeasByStatus } from '@/lib/coaching';
 import { createClient } from '@/lib/supabase/server';
 import { markPostedAction, dismissIdeaAction, updateDraftCopyAction } from '@/app/social/actions';
+import SubmitButton from '@/components/SubmitButton';
 import type { ContentIdea } from '@/types/database';
 
 const sectionClass = 'surface-card p-6';
@@ -23,21 +24,21 @@ function IdeaCard({ idea }: { idea: ContentIdea }) {
           rows={5}
           className={textareaClass}
         />
-        <button type="submit" className="mt-2 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
+        <SubmitButton pendingText="Saving..." className="mt-2 rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
           Save edits
-        </button>
+        </SubmitButton>
       </form>
 
       <div className="flex gap-2">
         <form action={markPostedAction.bind(null, idea.id)}>
-          <button type="submit" className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20">
+          <SubmitButton pendingText="Marking..." className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20">
             Mark posted
-          </button>
+          </SubmitButton>
         </form>
         <form action={dismissIdeaAction.bind(null, idea.id)}>
-          <button type="submit" className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-white/10 hover:bg-rose-500/10 hover:text-rose-400">
+          <SubmitButton pendingText="Dismissing..." className="rounded-lg bg-white/5 px-3 py-1.5 text-xs font-medium text-zinc-500 ring-1 ring-inset ring-white/10 hover:bg-rose-500/10 hover:text-rose-400">
             Dismiss
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </div>

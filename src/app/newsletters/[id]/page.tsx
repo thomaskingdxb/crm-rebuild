@@ -11,6 +11,7 @@ import {
   deleteTransactionStatAction,
 } from '@/app/newsletters/actions';
 import BackLink from '@/components/BackLink';
+import SubmitButton from '@/components/SubmitButton';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -56,15 +57,15 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
           <div className="flex flex-wrap gap-2">
             {edition.status !== 'sent' && (
               <form action={markSentWithId}>
-                <button type="submit" className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20">
+                <SubmitButton pendingText="Marking..." className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20">
                   Mark as Sent
-                </button>
+                </SubmitButton>
               </form>
             )}
             <form action={deleteWithId}>
-              <button type="submit" className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20">
+              <SubmitButton pendingText="Deleting..." className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20">
                 Delete
-              </button>
+              </SubmitButton>
             </form>
           </div>
         </div>
@@ -94,9 +95,9 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
             </p>
           )}
 
-          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+          <SubmitButton pendingText="Saving..." className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
             Save
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="mt-6 space-y-6">
@@ -118,9 +119,9 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
                       )}
                     </div>
                     <form action={deleteArticleAction.bind(null, id, a.id)}>
-                      <button type="submit" className="shrink-0 text-xs text-zinc-500 hover:text-rose-400">
+                      <SubmitButton pendingText="Removing..." className="shrink-0 text-xs text-zinc-500 hover:text-rose-400">
                         Remove
-                      </button>
+                      </SubmitButton>
                     </form>
                   </div>
                 </div>
@@ -134,9 +135,9 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
                 <input name="source_name" required placeholder="Source name (e.g. Gulf Business)" className={inputClass} />
                 <input name="source_url" placeholder="Source URL" className={inputClass} />
                 <input name="display_order" type="number" defaultValue={edition.newsletter_articles.length} placeholder="Order" className={inputClass} />
-                <button type="submit" className="col-span-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
+                <SubmitButton pendingText="Adding..." className="col-span-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
                   Add
-                </button>
+                </SubmitButton>
               </form>
             </details>
           </div>
@@ -169,9 +170,9 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
                             <td className="py-2 text-zinc-300">{s.share_pct !== null ? `${s.share_pct}%` : '—'}</td>
                             <td className="py-2 text-right">
                               <form action={deleteTransactionStatAction.bind(null, id, s.id)}>
-                                <button type="submit" className="text-xs text-zinc-500 hover:text-rose-400">
+                                <SubmitButton pendingText="Removing..." className="text-xs text-zinc-500 hover:text-rose-400">
                                   Remove
-                                </button>
+                                </SubmitButton>
                               </form>
                             </td>
                           </tr>
@@ -193,9 +194,9 @@ export default async function NewsletterEditionPage({ params }: { params: Promis
                 </select>
                 <input name="value_aed" type="number" step="0.01" placeholder="Value (AED millions)" className={inputClass} />
                 <input name="share_pct" type="number" step="0.1" placeholder="Share %" className={inputClass} />
-                <button type="submit" className="col-span-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
+                <SubmitButton pendingText="Adding..." className="col-span-2 rounded-lg bg-white/5 px-3 py-2 text-xs font-medium text-zinc-300 ring-1 ring-inset ring-white/10 hover:bg-white/10">
                   Add
-                </button>
+                </SubmitButton>
               </form>
             </details>
           </div>

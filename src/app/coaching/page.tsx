@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/server';
 import { resolveFlagAction } from '@/app/coaching/actions';
 import { getListingUpdatesDue } from '@/lib/properties';
 import { markListingUpdateSentAction } from '@/app/properties/actions';
+import SubmitButton from '@/components/SubmitButton';
 import type { CoachingFlagWithContext } from '@/types/database';
 
 const sectionClass = 'surface-card p-6';
@@ -45,12 +46,12 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
             </span>
           )}
           <form action={resolveFlagAction.bind(null, flag.id)}>
-            <button
-              type="submit"
+            <SubmitButton
+              pendingText="Resolving..."
               className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
             >
               {showConfirm ? 'Confirm resolved' : 'Mark resolved'}
-            </button>
+            </SubmitButton>
           </form>
         </div>
       </div>
@@ -145,12 +146,12 @@ export default async function CoachingPage() {
                         </Link>
                       )}
                       <form action={markListingUpdateSentAction.bind(null, l.property_id, l.owner_id)}>
-                        <button
-                          type="submit"
+                        <SubmitButton
+                          pendingText="Marking..."
                           className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
                         >
                           Mark update sent
-                        </button>
+                        </SubmitButton>
                       </form>
                     </div>
                   </div>

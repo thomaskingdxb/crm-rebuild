@@ -14,6 +14,7 @@ import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import EnquiryCard from '@/components/EnquiryCard';
 import DealCard from '@/components/DealCard';
 import BackLink from '@/components/BackLink';
+import SubmitButton from '@/components/SubmitButton';
 import CalculatorSummaryRow from '@/components/CalculatorSummaryRow';
 
 const inputClass =
@@ -222,9 +223,9 @@ export default async function PropertyDetailPage({ params }: { params: Promise<{
             <textarea name="notes" defaultValue={property.notes ?? ''} rows={4} className={inputClass} />
           </div>
 
-          <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
+          <SubmitButton pendingText="Saving..." className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
             Save Changes
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="mt-6 space-y-6">
