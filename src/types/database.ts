@@ -1,4 +1,4 @@
-// Types matching the live Supabase schema (project ref ndlqllcsgncsvlwifjvh).
+// Types matching the live Supabase schema (project ref cygulbxoispzfvehsecr).
 // Table shapes must stay in sync with DATABASE_SCHEMA.md — do not add fields here
 // that aren't confirmed in the actual database.
 
