@@ -80,6 +80,14 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
           </Link>
         </p>
       )}
+
+      {flag.deal_id && (
+        <p className="mt-2 text-xs">
+          <Link href={`/deals/${flag.deal_id}`} className="text-blue-400 hover:underline">
+            View deal →
+          </Link>
+        </p>
+      )}
     </div>
   );
 }

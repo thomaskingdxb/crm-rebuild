@@ -75,7 +75,7 @@ for (const folder of folders) {
     const { error: msgErr, count } = await supabase
       .from('whatsapp_messages')
       .upsert(batch, {
-        onConflict: 'conversation_id,sender_name,sent_at_minute,body,dedup_seq',
+        onConflict: 'conversation_id,sender_name,body,dedup_seq',
         ignoreDuplicates: true,
         count: 'exact',
       });

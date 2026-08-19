@@ -32,17 +32,18 @@ export function parseChat(filePath) {
   // sent in the same second with the same caption) so re-importing the same
   // export is idempotent without collapsing distinct messages into one.
   //
-  // WhatsApp shifts every timestamp by a few seconds between two separate
-  // "Export Chat" runs of the SAME historical conversation (confirmed: a
-  // constant ~2s offset across an entire chat when re-exported a day later).
-  // Grouping/matching on the exact second would treat every message as new
-  // on every re-export. Round to the minute for the dedup key so re-imports
-  // stay idempotent despite that jitter - the raw `sentAt` (full precision)
-  // is still what gets stored.
+  // WhatsApp shifts message timestamps between separate "Export Chat" runs of
+  // the SAME historical conversation - observed offsets ranging from ~2s up
+  // to a couple of hours, not a fixed amount. Any time-bucketed dedup key
+  // (exact second, rounded minute, etc.) is fragile to this since the offset
+  // varies. Content is the only stable signal: dedupSeq is now a running
+  // occurrence counter per (sender, body) across the WHOLE conversation, with
+  // no time component at all. This is deterministic across re-parses of the
+  // same export (messages are always processed in the same chronological
+  // order), so re-imports stay idempotent regardless of timestamp drift.
   const seen = new Map();
   for (const msg of messages) {
-    const minuteBucket = msg.sentAt.slice(0, 16); // 'YYYY-MM-DDTHH:MM'
-    const key = `${msg.sender}|${minuteBucket}|${msg.body}`;
+    const key = `${msg.sender}|${msg.body}`;
     const count = (seen.get(key) ?? 0) + 1;
     seen.set(key, count);
     msg.dedupSeq = count;

@@ -193,6 +193,7 @@ export interface CoachingFlag {
   resolved: boolean;
   suggested_resolved: boolean;
   created_at: string;
+  deal_id: string | null;
 }
 
 export interface CoachingFlagWithContext extends CoachingFlag {

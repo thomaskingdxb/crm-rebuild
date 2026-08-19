@@ -117,6 +117,16 @@ export async function getContentIdeasByStatus(status: ContentIdea['status'], db:
   return data as ContentIdea[];
 }
 
+export async function getDealFlags(dealId: string, db: SupabaseClient = defaultClient): Promise<CoachingFlagWithContext[]> {
+  const { data, error } = await db
+    .from('coaching_flags')
+    .select(FLAG_SELECT)
+    .eq('deal_id', dealId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return attachDraftsAndTasks(data as unknown as CoachingFlagWithContext[], db);
+}
+
 export async function getContactMemory(contactId: string, db: SupabaseClient = defaultClient): Promise<CoachingMemory | null> {
   const { data, error } = await db.from('coaching_memory').select('*').eq('contact_id', contactId).maybeSingle();
   if (error) throw error;
