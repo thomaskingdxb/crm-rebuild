@@ -143,6 +143,18 @@ export interface Deal {
   date_completed: string | null;
 }
 
+export interface RentalCheque {
+  id: string;
+  deal_id: string;
+  cheque_number: number;
+  amount: number;
+  due_date: string;
+  deposited: boolean;
+  deposited_date: string | null;
+  notes: string | null;
+  task_id: string | null;
+}
+
 export interface DealWithRelations extends Deal {
   deal_types: Lookup | null;
   deal_stages: DealStage | null;

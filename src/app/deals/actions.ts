@@ -2,7 +2,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
-import { generateNextDealId } from '@/lib/deals';
+import { generateNextDealId, getDeal } from '@/lib/deals';
+import { generateNextTaskId } from '@/lib/tasks';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -84,6 +85,100 @@ export async function deleteDealModalAction(id: string) {
   if (error) throw error;
 
   revalidatePath('/deals');
+}
+
+// Cheques get a linked task so the deposit deadline surfaces on /tasks
+// automatically (TaskCard already colors overdue/due-today deadlines red/amber -
+// no separate reminder mechanism needed). Depositing or deleting a cheque
+// deletes its task, matching this app's existing delete-to-complete convention
+// for tasks (see deleteTaskModalAction in src/app/tasks/actions.ts).
+export async function addChequeAction(dealId: string, formData: FormData) {
+  const supabase = await createClient();
+
+  const chequeNumber = num(formData.get('cheque_number'));
+  const amount = num(formData.get('amount'));
+  const dueDate = (formData.get('due_date') as string) || null;
+  const notes = (formData.get('notes') as string) || null;
+
+  if (chequeNumber == null || amount == null || !dueDate) {
+    throw new Error('Cheque number, amount, and due date are required.');
+  }
+
+  const deal = await getDeal(dealId, supabase);
+
+  const taskId = await generateNextTaskId(supabase);
+  const { error: taskError } = await supabase.from('tasks').insert({
+    id: taskId,
+    client_id: deal?.buyer_id ?? null,
+    deal_id: dealId,
+    task_info: `Deposit rental cheque #${chequeNumber} (AED ${amount.toLocaleString()})`,
+    deadline_date: dueDate,
+  });
+  if (taskError) throw taskError;
+
+  const { error } = await supabase.from('rental_cheques').insert({
+    deal_id: dealId,
+    cheque_number: chequeNumber,
+    amount,
+    due_date: dueDate,
+    notes,
+    task_id: taskId,
+  });
+  if (error) throw error;
+
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath('/tasks');
+  revalidatePath('/coaching');
+}
+
+export async function markChequeDepositedAction(chequeId: string, dealId?: string) {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: cheque, error: fetchError } = await supabase
+    .from('rental_cheques')
+    .select('task_id')
+    .eq('id', chequeId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const { error } = await supabase
+    .from('rental_cheques')
+    .update({ deposited: true, deposited_date: today })
+    .eq('id', chequeId);
+  if (error) throw error;
+
+  if (cheque?.task_id) {
+    const { error: taskError } = await supabase.from('tasks').delete().eq('id', cheque.task_id);
+    if (taskError) throw taskError;
+  }
+
+  if (dealId) revalidatePath(`/deals/${dealId}`);
+  revalidatePath('/tasks');
+  revalidatePath('/coaching');
+}
+
+export async function deleteChequeAction(chequeId: string, dealId: string) {
+  const supabase = await createClient();
+
+  const { data: cheque, error: fetchError } = await supabase
+    .from('rental_cheques')
+    .select('task_id')
+    .eq('id', chequeId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const { error } = await supabase.from('rental_cheques').delete().eq('id', chequeId);
+  if (error) throw error;
+
+  if (cheque?.task_id) {
+    const { error: taskError } = await supabase.from('tasks').delete().eq('id', cheque.task_id);
+    if (taskError) throw taskError;
+  }
+
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath('/tasks');
+  revalidatePath('/coaching');
 }
 
 // Called from the Kanban board when a card is dragged into a new stage column.

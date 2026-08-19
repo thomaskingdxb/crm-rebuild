@@ -13,6 +13,8 @@ import { createClient } from '@/lib/supabase/server';
 import { resolveFlagAction } from '@/app/coaching/actions';
 import { getListingUpdatesDue } from '@/lib/properties';
 import { markListingUpdateSentAction } from '@/app/properties/actions';
+import { getChequesDue } from '@/lib/rentalCheques';
+import { markChequeDepositedAction } from '@/app/deals/actions';
 import SubmitButton from '@/components/SubmitButton';
 import type { CoachingFlagWithContext } from '@/types/database';
 
@@ -94,7 +96,7 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
 
 export default async function CoachingPage() {
   const supabase = await createClient();
-  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass, listingUpdatesDue] = await Promise.all([
+  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass, listingUpdatesDue, chequesDue] = await Promise.all([
     getOpenNeedsResponseFlags(supabase),
     getSuggestedResolvedFlags(supabase),
     getOpenTaskFlags(supabase),
@@ -102,8 +104,10 @@ export default async function CoachingPage() {
     getContentIdeasByStatus('new', supabase),
     getLastCoachingPassAt(supabase),
     getListingUpdatesDue(supabase),
+    getChequesDue(supabase),
   ]);
   const { overdueCommitments, otherOpen } = splitByUrgency(allOpenTasks);
+  const overdueCheques = chequesDue.filter((c) => c.days_until_due < 0);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f]">
@@ -164,6 +168,62 @@ export default async function CoachingPage() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {chequesDue.length > 0 && (
+            <div className={`surface-card border p-6 ${overdueCheques.length > 0 ? 'border-rose-500/20' : 'border-amber-500/20'}`}>
+              <h2 className={`mb-1 text-sm font-semibold ${overdueCheques.length > 0 ? 'text-rose-400' : 'text-amber-400'}`}>
+                🏦 Cheques Due to Deposit ({chequesDue.length})
+              </h2>
+              <p className="mb-4 text-xs text-zinc-500">
+                Physical tenant cheques you&apos;re holding — deposit by the due date or they bounce.
+              </p>
+              <div className="flex flex-col gap-3">
+                {chequesDue.map((c) => {
+                  const overdue = c.days_until_due < 0;
+                  const dueSoon = c.days_until_due >= 0 && c.days_until_due <= 7;
+                  return (
+                    <div
+                      key={c.cheque_id}
+                      className={`flex items-center justify-between gap-3 rounded-lg p-4 ring-1 ring-inset ${
+                        overdue ? 'bg-rose-500/5 ring-rose-500/20' : dueSoon ? 'bg-amber-500/5 ring-amber-500/20' : 'bg-white/5 ring-white/10'
+                      }`}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          {c.tenant_name ?? 'Unknown tenant'} — {c.building ?? 'No property'} {c.unit_number ?? ''}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Cheque #{c.cheque_number} · AED {c.amount.toLocaleString()} · Due {new Date(c.due_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        {overdue ? (
+                          <span className="rounded-full bg-rose-500/15 px-2 py-1 text-[10px] font-semibold text-rose-400">
+                            {Math.abs(c.days_until_due)}d overdue
+                          </span>
+                        ) : (
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${dueSoon ? 'bg-amber-500/15 text-amber-400' : 'bg-white/10 text-zinc-400'}`}>
+                            {c.days_until_due === 0 ? 'Due today' : `${c.days_until_due}d until due`}
+                          </span>
+                        )}
+                        <Link href={`/deals/${c.deal_id}`} className="text-xs text-blue-400 hover:underline">
+                          View deal
+                        </Link>
+                        <form action={markChequeDepositedAction.bind(null, c.cheque_id, c.deal_id)}>
+                          <SubmitButton
+                            pendingText="Marking..."
+                            className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+                          >
+                            Mark deposited
+                          </SubmitButton>
+                        </form>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

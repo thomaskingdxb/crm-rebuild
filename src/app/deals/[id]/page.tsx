@@ -3,11 +3,19 @@ import { notFound } from 'next/navigation';
 import { getDeal } from '@/lib/deals';
 import { getDealFlags, daysOverdue } from '@/lib/coaching';
 import { grossCommission, netCommission } from '@/lib/deals';
+import { getChequesForDeal } from '@/lib/rentalCheques';
+import { addChequeAction, markChequeDepositedAction, deleteChequeAction } from '@/app/deals/actions';
 import { createClient } from '@/lib/supabase/server';
 import { formatDate } from '@/lib/date';
 import BackLink from '@/components/BackLink';
+import SubmitButton from '@/components/SubmitButton';
 
 const sectionClass = 'surface-card p-6';
+const inputClass = 'w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-blue-500/50 focus:outline-none';
+
+function formatAed(n: number | null): string {
+  return n != null ? `AED ${n.toLocaleString()}` : '—';
+}
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,6 +23,9 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const [deal, flags] = await Promise.all([getDeal(id, supabase), getDealFlags(id, supabase)]);
 
   if (!deal) notFound();
+
+  const isRental = deal.deal_type_id === 1;
+  const cheques = isRental ? await getChequesForDeal(id, supabase) : [];
 
   const gross = grossCommission(deal);
   const net = netCommission(deal);
@@ -127,6 +138,87 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               </div>
             )}
           </div>
+
+          {isRental && (
+            <div className={sectionClass}>
+              <h2 className="mb-4 text-sm font-semibold text-zinc-100">Rental cheques ({cheques.length})</h2>
+
+              {cheques.length === 0 ? (
+                <p className="mb-4 text-sm text-zinc-500">No cheques recorded for this deal yet.</p>
+              ) : (
+                <div className="mb-4 flex flex-col gap-3">
+                  {cheques.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg bg-white/5 p-4 ring-1 ring-inset ring-white/10">
+                      <div>
+                        <p className="text-sm font-medium text-zinc-100">
+                          Cheque #{c.cheque_number} — {formatAed(c.amount)}
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Due {formatDate(c.due_date)}
+                          {c.deposited && c.deposited_date && ` · Deposited ${formatDate(c.deposited_date)}`}
+                        </p>
+                        {c.notes && <p className="mt-1 text-xs text-zinc-500">{c.notes}</p>}
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span
+                          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${
+                            c.deposited ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'
+                          }`}
+                        >
+                          {c.deposited ? 'Deposited' : 'Pending'}
+                        </span>
+                        {!c.deposited && (
+                          <form action={markChequeDepositedAction.bind(null, c.id, id)}>
+                            <SubmitButton
+                              pendingText="Marking..."
+                              className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+                            >
+                              Mark deposited
+                            </SubmitButton>
+                          </form>
+                        )}
+                        <form action={deleteChequeAction.bind(null, c.id, id)}>
+                          <SubmitButton
+                            pendingText="Removing..."
+                            className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20"
+                          >
+                            Remove
+                          </SubmitButton>
+                        </form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <form action={addChequeAction.bind(null, id)} className="grid grid-cols-2 gap-3 rounded-lg bg-white/5 p-4 ring-1 ring-inset ring-white/10 sm:grid-cols-4">
+                <div>
+                  <label className="mb-1 block text-xs text-zinc-500">Cheque #</label>
+                  <input name="cheque_number" type="number" min="1" required className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-zinc-500">Amount (AED)</label>
+                  <input name="amount" type="number" step="0.01" min="0" required className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-zinc-500">Due date</label>
+                  <input name="due_date" type="date" required className={inputClass} />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-zinc-500">Notes (optional)</label>
+                  <input name="notes" type="text" className={inputClass} />
+                </div>
+                <div className="col-span-2 sm:col-span-4">
+                  <SubmitButton
+                    pendingText="Adding..."
+                    className="rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 hover:bg-blue-500/20"
+                  >
+                    + Add cheque
+                  </SubmitButton>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
