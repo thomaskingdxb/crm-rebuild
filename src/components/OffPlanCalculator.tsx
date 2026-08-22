@@ -450,7 +450,15 @@ export default function OffPlanCalculator({
       if (includeSchedule && rows.length > 0) {
         sectionLabel('Payment Schedule');
         const colW = [8, contentW * 0.32, contentW * 0.18, contentW * 0.1, contentW * 0.2, contentW * 0.2 - 8];
-        const tableH = padV * 2 + (calc.rowData.length + 1) * rowH;
+        const lineH = 3.6; // line height for wrapped milestone text, mm
+        const milestoneColW = colW[1] - 3; // small right-padding before the Date column
+
+        pdf.setFontSize(9);
+        const wrappedRows = calc.rowData.map((r) => {
+          const lines: string[] = pdf.splitTextToSize(r.milestone, milestoneColW);
+          return { r, lines, rowHeight: Math.max(rowH, lines.length * lineH + 3) };
+        });
+        const tableH = padV * 2 + rowH + wrappedRows.reduce((sum, wr) => sum + wr.rowHeight, 0);
         pdf.setFillColor(...card);
         pdf.setDrawColor(...borderCard);
         pdf.roundedRect(marginX, y, contentW, tableH, 2, 2, 'FD');
@@ -467,31 +475,36 @@ export default function OffPlanCalculator({
         });
         pdf.setFont('helvetica', 'normal');
 
-        calc.rowData.forEach((r, i) => {
-          const cellTop = y + padV + (i + 1) * rowH;
-          rowY = cellTop + rowH / 2 + capOffset;
+        let cellTop = y + padV + rowH;
+        wrappedRows.forEach(({ r, lines, rowHeight }, i) => {
+          const rowCenterY = cellTop + rowHeight / 2 + capOffset;
           pdf.setDrawColor(...rowDivider);
           pdf.line(marginX + 4, cellTop, marginX + contentW - 4, cellTop);
 
           colX = marginX + 4;
           pdf.setFontSize(9);
           pdf.setTextColor(...textMuted);
-          pdf.text(String(i + 1), colX, rowY);
+          pdf.text(String(i + 1), colX, rowCenterY);
           colX += colW[0];
+
           pdf.setTextColor(...textLight);
-          pdf.text(r.milestone, colX, rowY);
+          const milestoneStartY = cellTop + (rowHeight - (lines.length - 1) * lineH) / 2 + capOffset;
+          lines.forEach((line, li) => pdf.text(line, colX, milestoneStartY + li * lineH));
           colX += colW[1];
+
           pdf.setTextColor(...textMuted);
-          pdf.text(r.date || '—', colX, rowY);
+          pdf.text(r.date || '—', colX, rowCenterY);
           colX += colW[2];
-          pdf.text(`${r.pct}%`, colX, rowY);
+          pdf.text(`${r.pct}%`, colX, rowCenterY);
           colX += colW[3];
           pdf.setTextColor(...textLight);
-          pdf.text(fmt(r.fullAmt), colX, rowY);
+          pdf.text(fmt(r.fullAmt), colX, rowCenterY);
           colX += colW[4];
           const statusColor = r.status === 'paid' ? emerald : r.status === 'partial' ? goldBright : textFaint;
           pdf.setTextColor(...statusColor);
-          pdf.text(statusLabel[r.status], colX, rowY);
+          pdf.text(statusLabel[r.status], colX, rowCenterY);
+
+          cellTop += rowHeight;
         });
 
         y += tableH + 6;
