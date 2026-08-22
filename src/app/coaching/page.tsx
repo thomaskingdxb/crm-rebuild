@@ -3,7 +3,6 @@ import {
   getOpenNeedsResponseFlags,
   getSuggestedResolvedFlags,
   getOpenTaskFlags,
-  getUnmatchedContacts,
   getContentIdeasByStatus,
   getLastCoachingPassAt,
   splitByUrgency,
@@ -96,11 +95,10 @@ function FlagCard({ flag, showConfirm = false }: { flag: CoachingFlagWithContext
 
 export default async function CoachingPage() {
   const supabase = await createClient();
-  const [needsResponse, suggestedResolved, allOpenTasks, unmatched, contentIdeas, lastPass, listingUpdatesDue, chequesDue] = await Promise.all([
+  const [needsResponse, suggestedResolved, allOpenTasks, contentIdeas, lastPass, listingUpdatesDue, chequesDue] = await Promise.all([
     getOpenNeedsResponseFlags(supabase),
     getSuggestedResolvedFlags(supabase),
     getOpenTaskFlags(supabase),
-    getUnmatchedContacts(supabase),
     getContentIdeasByStatus('new', supabase),
     getLastCoachingPassAt(supabase),
     getListingUpdatesDue(supabase),
@@ -270,27 +268,6 @@ export default async function CoachingPage() {
               <div className="flex flex-col gap-4">
                 {otherOpen.map((f) => (
                   <FlagCard key={f.id} flag={f} />
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className={sectionClass}>
-            <h2 className="mb-4 text-sm font-semibold text-zinc-100">New Leads ({unmatched.length})</h2>
-            {unmatched.length === 0 ? (
-              <p className="text-sm text-zinc-500">No unmatched WhatsApp contacts.</p>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {unmatched.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between rounded-lg bg-white/5 px-4 py-3 ring-1 ring-inset ring-white/10">
-                    <span className="text-sm text-zinc-200">{c.display_name}</span>
-                    <Link
-                      href={`/clients/new?name=${encodeURIComponent(c.display_name)}`}
-                      className="rounded-lg bg-blue-500/10 px-3 py-1.5 text-xs font-medium text-blue-400 ring-1 ring-inset ring-blue-500/20 hover:bg-blue-500/20"
-                    >
-                      + Add as client
-                    </Link>
-                  </div>
                 ))}
               </div>
             )}
