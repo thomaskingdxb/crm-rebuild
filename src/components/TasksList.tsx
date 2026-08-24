@@ -4,6 +4,18 @@ import { useMemo, useState } from 'react';
 import type { TaskWithRelations, Lookup } from '@/types/database';
 import TaskCard from '@/components/TaskCard';
 import { usePersistentState } from '@/lib/usePersistentState';
+import { daysSince } from '@/lib/date';
+
+// Overdue first (most overdue at top), then due-today, then due-soon
+// (nearest deadline first), then no-deadline tasks last.
+function urgencySort(a: TaskWithRelations, b: TaskWithRelations): number {
+  const da = daysSince(a.deadline_date);
+  const db = daysSince(b.deadline_date);
+  if (da === null && db === null) return 0;
+  if (da === null) return 1;
+  if (db === null) return -1;
+  return db - da;
+}
 
 const pillClass = 'inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition';
 const pillInactive = 'text-zinc-400 ring-white/10 hover:ring-white/20';
@@ -33,20 +45,22 @@ export default function TasksList({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return tasks.filter((t) => {
-      if (q) {
-        const haystack = [t.id, t.task_info, t.clients?.name, ...t.task_task_types.map((tt) => tt.task_types.name)]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      if (selectedTypes.size > 0) {
-        const ids = new Set(t.task_task_types.map((tt) => tt.task_types.id));
-        if (![...selectedTypes].some((id) => ids.has(id))) return false;
-      }
-      return true;
-    });
+    return tasks
+      .filter((t) => {
+        if (q) {
+          const haystack = [t.id, t.task_info, t.clients?.name, ...t.task_task_types.map((tt) => tt.task_types.name)]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+        if (selectedTypes.size > 0) {
+          const ids = new Set(t.task_task_types.map((tt) => tt.task_types.id));
+          if (![...selectedTypes].some((id) => ids.has(id))) return false;
+        }
+        return true;
+      })
+      .sort(urgencySort);
   }, [tasks, query, selectedTypes]);
 
   return (

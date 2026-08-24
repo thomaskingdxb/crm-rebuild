@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase as defaultClient } from '@/lib/supabase/client';
 import type { PropertyWithRelations, Lookup } from '@/types/database';
+import { generateNextTaskId } from '@/lib/tasks';
 
 const PROPERTY_SELECT = `*,
   property_property_types ( property_types ( id, name, display_order ) ),
@@ -100,11 +101,15 @@ export interface ListingUpdateDue {
   owner_id: string | null;
   owner_name: string | null;
   last_update_sent_date: string | null;
+  listing_update_task_id: string | null;
   days_since_update: number | null; // null = never sent
 }
 
-// Fully live-computed, not a stored task - a listed property with no update
-// in 7+ days always shows up here automatically, no re-generation needed.
+// Read-with-upsert-side-effect: every actively-marketed property with no
+// update in 7+ days is returned, and any such property that doesn't yet have
+// a linked task (properties.listing_update_task_id) gets one created here so
+// it surfaces on /tasks. Once markListingUpdateSentAction() clears the task
+// and last_update_sent_date, the next call recreates a fresh task.
 export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): Promise<ListingUpdateDue[]> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
 
@@ -121,26 +126,52 @@ export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): 
 
   const { data, error } = await db
     .from('properties')
-    .select('id, building, unit_number, last_update_sent_date, owner_id, listing_statuses ( name ), clients ( name )')
+    .select('id, building, unit_number, last_update_sent_date, owner_id, listing_update_task_id, listing_statuses ( name ), clients ( name )')
     .in('listing_status_id', activeStatusIds)
     .or(`last_update_sent_date.is.null,last_update_sent_date.lte.${sevenDaysAgo}`);
   if (error) throw error;
 
   const today = Date.now();
-  return (data ?? [])
-    .map((p) => ({
-      property_id: p.id,
-      building: p.building,
-      unit_number: p.unit_number,
-      listing_status: (p.listing_statuses as unknown as { name: string }).name,
-      owner_id: p.owner_id,
-      owner_name: (p.clients as unknown as { name: string } | null)?.name ?? null,
-      last_update_sent_date: p.last_update_sent_date,
-      days_since_update: p.last_update_sent_date
-        ? Math.floor((today - new Date(p.last_update_sent_date).getTime()) / 86_400_000)
-        : null,
-    }))
-    .sort((a, b) => (b.days_since_update ?? 999) - (a.days_since_update ?? 999));
+  const due = (data ?? []).map((p) => ({
+    property_id: p.id,
+    building: p.building,
+    unit_number: p.unit_number,
+    listing_status: (p.listing_statuses as unknown as { name: string }).name,
+    owner_id: p.owner_id,
+    owner_name: (p.clients as unknown as { name: string } | null)?.name ?? null,
+    last_update_sent_date: p.last_update_sent_date,
+    listing_update_task_id: p.listing_update_task_id as string | null,
+    days_since_update: p.last_update_sent_date
+      ? Math.floor((today - new Date(p.last_update_sent_date).getTime()) / 86_400_000)
+      : null,
+  }));
+
+  for (const p of due) {
+    if (p.listing_update_task_id) continue;
+
+    const deadlineDate = p.last_update_sent_date
+      ? new Date(new Date(p.last_update_sent_date).getTime() + 7 * 86_400_000).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10);
+
+    const taskId = await generateNextTaskId(db);
+    const { error: taskError } = await db.from('tasks').insert({
+      id: taskId,
+      client_id: p.owner_id,
+      task_info: `Send weekly listing update - ${p.building ?? ''} ${p.unit_number ?? ''}`.trim(),
+      deadline_date: deadlineDate,
+    });
+    if (taskError) throw taskError;
+
+    const { error: updateError } = await db
+      .from('properties')
+      .update({ listing_update_task_id: taskId })
+      .eq('id', p.property_id);
+    if (updateError) throw updateError;
+
+    p.listing_update_task_id = taskId;
+  }
+
+  return due.sort((a, b) => (b.days_since_update ?? 999) - (a.days_since_update ?? 999));
 }
 
 export async function generateNextPropertyId(db: SupabaseClient = defaultClient): Promise<string> {

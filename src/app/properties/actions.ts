@@ -98,8 +98,23 @@ export async function markListingUpdateSentAction(propertyId: string, ownerId: s
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { error } = await supabase.from('properties').update({ last_update_sent_date: today }).eq('id', propertyId);
+  const { data: property, error: fetchError } = await supabase
+    .from('properties')
+    .select('listing_update_task_id')
+    .eq('id', propertyId)
+    .single();
+  if (fetchError) throw fetchError;
+
+  const { error } = await supabase
+    .from('properties')
+    .update({ last_update_sent_date: today, listing_update_task_id: null })
+    .eq('id', propertyId);
   if (error) throw error;
+
+  if (property?.listing_update_task_id) {
+    const { error: taskError } = await supabase.from('tasks').delete().eq('id', property.listing_update_task_id);
+    if (taskError) throw taskError;
+  }
 
   if (ownerId) {
     const { error: clientErr } = await supabase.from('clients').update({ last_contact_date: today }).eq('id', ownerId);
@@ -107,6 +122,7 @@ export async function markListingUpdateSentAction(propertyId: string, ownerId: s
   }
 
   revalidatePath('/coaching');
+  revalidatePath('/tasks');
   revalidatePath('/properties');
   revalidatePath(`/properties/${propertyId}`);
 }

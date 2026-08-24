@@ -1,11 +1,15 @@
 import { getTasks, getTaskTypes } from '@/lib/tasks';
 import { getClientsBasic } from '@/lib/clients';
+import { getListingUpdatesDue } from '@/lib/properties';
 import { createClient } from '@/lib/supabase/server';
 import TasksList from '@/components/TasksList';
 import AddTaskButton from '@/components/AddTaskButton';
 
 export default async function TasksPage() {
   const supabase = await createClient();
+  // Ensures any due weekly listing updates have a real linked task before we
+  // read tasks below (see getListingUpdatesDue's ensure-task-exists behavior).
+  await getListingUpdatesDue(supabase);
   const [tasks, taskTypes, clients] = await Promise.all([getTasks(supabase), getTaskTypes(supabase), getClientsBasic(supabase)]);
 
   return (

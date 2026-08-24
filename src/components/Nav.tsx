@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { label: 'Follow Ups', href: '/follow-ups', available: true },
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
-  { label: 'Coaching', href: '/coaching', available: true },
+  { label: 'Coaching', href: '/coaching', available: false, badge: 'WIP' },
   { label: 'Social', href: '/social', available: true },
   { label: 'Newsletters', href: '/newsletters', available: true },
   { label: 'KPIs', href: '/kpis', available: true },
@@ -76,7 +76,7 @@ export default function Nav() {
                     className="flex items-center justify-between rounded-lg px-3 py-2 text-sm text-zinc-600"
                   >
                     {item.label}
-                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500">Soon</span>
+                    <span className="rounded-full bg-white/5 px-2 py-0.5 text-[10px] text-zinc-500">{item.badge ?? 'Soon'}</span>
                   </span>
                 );
               }
