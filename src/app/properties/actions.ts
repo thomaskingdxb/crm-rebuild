@@ -43,6 +43,46 @@ function readPropertyForm(formData: FormData) {
   };
 }
 
+async function getActiveListingStatusIds(supabase: SupabaseClient): Promise<number[]> {
+  const { data, error } = await supabase
+    .from('listing_statuses')
+    .select('id')
+    .in('name', ['Property Listed', 'Exclusive']);
+  if (error) throw error;
+  return (data ?? []).map((s) => s.id as number);
+}
+
+async function createListingUpdateTask(
+  supabase: SupabaseClient,
+  propertyId: string,
+  ownerId: string | null,
+  building: string | null,
+  unitNumber: string | null
+): Promise<string> {
+  const today = new Date().toISOString().slice(0, 10);
+  const taskId = await generateNextTaskId(supabase);
+  const { error: taskError } = await supabase.from('tasks').insert({
+    id: taskId,
+    client_id: ownerId,
+    task_info: `Send weekly listing update - ${building ?? ''} ${unitNumber ?? ''}`.trim(),
+    deadline_date: today,
+  });
+  if (taskError) throw taskError;
+
+  const { error: typeError } = await supabase
+    .from('task_task_types')
+    .insert({ task_id: taskId, task_type_id: MARKET_UPDATE_TASK_TYPE_ID });
+  if (typeError) throw typeError;
+
+  const { error: updateError } = await supabase
+    .from('properties')
+    .update({ listing_update_task_id: taskId })
+    .eq('id', propertyId);
+  if (updateError) throw updateError;
+
+  return taskId;
+}
+
 function readMultiSelectIds(formData: FormData) {
   return {
     typeIds: formData.getAll('property_type_ids').map(Number),
@@ -72,6 +112,13 @@ export async function createPropertyAction(formData: FormData) {
   await syncMultiSelect(supabase, 'property_developers', 'property_id', 'developer_id', id, sel.developerIds);
   await syncMultiSelect(supabase, 'property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
 
+  if (fields.listing_status_id != null) {
+    const activeIds = await getActiveListingStatusIds(supabase);
+    if (activeIds.includes(fields.listing_status_id)) {
+      await createListingUpdateTask(supabase, id, fields.owner_id, fields.building, fields.unit_number);
+    }
+  }
+
   revalidatePath('/properties');
   redirect(`/properties/${id}`);
 }
@@ -80,6 +127,13 @@ export async function updatePropertyAction(id: string, formData: FormData) {
   const supabase = await createClient();
   const fields = readPropertyForm(formData);
   const sel = readMultiSelectIds(formData);
+
+  const { data: existing, error: existingError } = await supabase
+    .from('properties')
+    .select('listing_status_id, listing_update_task_id')
+    .eq('id', id)
+    .single();
+  if (existingError) throw existingError;
 
   const { error } = await supabase.from('properties').update(fields).eq('id', id);
   if (error) throw error;
@@ -91,6 +145,24 @@ export async function updatePropertyAction(id: string, formData: FormData) {
   await syncMultiSelect(supabase, 'property_bathroom_counts', 'property_id', 'bathroom_count_id', id, sel.bathroomIds);
   await syncMultiSelect(supabase, 'property_developers', 'property_id', 'developer_id', id, sel.developerIds);
   await syncMultiSelect(supabase, 'property_view_types', 'property_id', 'view_type_id', id, sel.viewIds);
+
+  const activeIds = await getActiveListingStatusIds(supabase);
+  const wasActive = existing?.listing_status_id != null && activeIds.includes(existing.listing_status_id);
+  const isActive = fields.listing_status_id != null && activeIds.includes(fields.listing_status_id);
+
+  if (isActive && !existing?.listing_update_task_id) {
+    // Became active (or was active but somehow lost its task pointer) - start the cycle.
+    await createListingUpdateTask(supabase, id, fields.owner_id, fields.building, fields.unit_number);
+  } else if (!isActive && wasActive && existing?.listing_update_task_id) {
+    // No longer actively listed - stop the recurrence.
+    const { error: delTaskError } = await supabase.from('tasks').delete().eq('id', existing.listing_update_task_id);
+    if (delTaskError) throw delTaskError;
+    const { error: clearError } = await supabase
+      .from('properties')
+      .update({ listing_update_task_id: null })
+      .eq('id', id);
+    if (clearError) throw clearError;
+  }
 
   revalidatePath(`/properties/${id}`);
   revalidatePath('/properties');
@@ -108,7 +180,7 @@ export async function markListingUpdateSentAction(propertyId: string, ownerId: s
 
   const { data: property, error: fetchError } = await supabase
     .from('properties')
-    .select('listing_update_task_id, building, unit_number')
+    .select('listing_update_task_id, building, unit_number, listing_status_id')
     .eq('id', propertyId)
     .single();
   if (fetchError) throw fetchError;
@@ -118,20 +190,26 @@ export async function markListingUpdateSentAction(propertyId: string, ownerId: s
     if (taskError) throw taskError;
   }
 
-  const nextDeadline = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
-  const nextTaskId = await generateNextTaskId(supabase);
-  const { error: nextTaskError } = await supabase.from('tasks').insert({
-    id: nextTaskId,
-    client_id: ownerId,
-    task_info: `Send weekly listing update - ${property?.building ?? ''} ${property?.unit_number ?? ''}`.trim(),
-    deadline_date: nextDeadline,
-  });
-  if (nextTaskError) throw nextTaskError;
+  const activeIds = await getActiveListingStatusIds(supabase);
+  const isActive = property?.listing_status_id != null && activeIds.includes(property.listing_status_id);
 
-  const { error: typeError } = await supabase
-    .from('task_task_types')
-    .insert({ task_id: nextTaskId, task_type_id: MARKET_UPDATE_TASK_TYPE_ID });
-  if (typeError) throw typeError;
+  let nextTaskId: string | null = null;
+  if (isActive) {
+    const nextDeadline = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+    nextTaskId = await generateNextTaskId(supabase);
+    const { error: nextTaskError } = await supabase.from('tasks').insert({
+      id: nextTaskId,
+      client_id: ownerId,
+      task_info: `Send weekly listing update - ${property?.building ?? ''} ${property?.unit_number ?? ''}`.trim(),
+      deadline_date: nextDeadline,
+    });
+    if (nextTaskError) throw nextTaskError;
+
+    const { error: typeError } = await supabase
+      .from('task_task_types')
+      .insert({ task_id: nextTaskId, task_type_id: MARKET_UPDATE_TASK_TYPE_ID });
+    if (typeError) throw typeError;
+  }
 
   const { error } = await supabase
     .from('properties')

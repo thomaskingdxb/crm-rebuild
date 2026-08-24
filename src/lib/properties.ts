@@ -124,7 +124,7 @@ export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): 
   const { data: activeStatuses, error: statusErr } = await db
     .from('listing_statuses')
     .select('id')
-    .in('name', ['Property Listed', 'Exclusive', 'Pocket Listing']);
+    .in('name', ['Property Listed', 'Exclusive']);
   if (statusErr) throw statusErr;
   const activeStatusIds = (activeStatuses ?? []).map((s) => s.id);
   if (activeStatusIds.length === 0) return [];
