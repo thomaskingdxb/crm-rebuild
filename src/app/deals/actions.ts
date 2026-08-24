@@ -7,6 +7,8 @@ import { generateNextTaskId } from '@/lib/tasks';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+const CHEQUE_DEPOSIT_TASK_TYPE_ID = 12;
+
 function num(v: FormDataEntryValue | null): number | null {
   if (!v) return null;
   const n = Number(v);
@@ -115,6 +117,11 @@ export async function addChequeAction(dealId: string, formData: FormData) {
     deadline_date: dueDate,
   });
   if (taskError) throw taskError;
+
+  const { error: typeError } = await supabase
+    .from('task_task_types')
+    .insert({ task_id: taskId, task_type_id: CHEQUE_DEPOSIT_TASK_TYPE_ID });
+  if (typeError) throw typeError;
 
   const { error } = await supabase.from('rental_cheques').insert({
     deal_id: dealId,

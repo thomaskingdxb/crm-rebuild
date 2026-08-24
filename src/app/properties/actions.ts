@@ -3,8 +3,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/server';
 import { generateNextPropertyId } from '@/lib/properties';
+import { generateNextTaskId } from '@/lib/tasks';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+
+const MARKET_UPDATE_TASK_TYPE_ID = 11;
 
 function num(v: FormDataEntryValue | null): number | null {
   if (!v) return null;
@@ -94,27 +97,47 @@ export async function updatePropertyAction(id: string, formData: FormData) {
   redirect(`/properties/${id}`);
 }
 
+// Marking an update sent immediately creates the NEXT cycle's task (deadline
+// = today + 7 days) rather than clearing the pointer and waiting for
+// getListingUpdatesDue() to notice 7+ days later - that old flow meant the
+// next task was born already overdue with zero advance warning. This keeps
+// properties.listing_update_task_id always pointing at a live, future task.
 export async function markListingUpdateSentAction(propertyId: string, ownerId: string | null) {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
   const { data: property, error: fetchError } = await supabase
     .from('properties')
-    .select('listing_update_task_id')
+    .select('listing_update_task_id, building, unit_number')
     .eq('id', propertyId)
     .single();
   if (fetchError) throw fetchError;
-
-  const { error } = await supabase
-    .from('properties')
-    .update({ last_update_sent_date: today, listing_update_task_id: null })
-    .eq('id', propertyId);
-  if (error) throw error;
 
   if (property?.listing_update_task_id) {
     const { error: taskError } = await supabase.from('tasks').delete().eq('id', property.listing_update_task_id);
     if (taskError) throw taskError;
   }
+
+  const nextDeadline = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+  const nextTaskId = await generateNextTaskId(supabase);
+  const { error: nextTaskError } = await supabase.from('tasks').insert({
+    id: nextTaskId,
+    client_id: ownerId,
+    task_info: `Send weekly listing update - ${property?.building ?? ''} ${property?.unit_number ?? ''}`.trim(),
+    deadline_date: nextDeadline,
+  });
+  if (nextTaskError) throw nextTaskError;
+
+  const { error: typeError } = await supabase
+    .from('task_task_types')
+    .insert({ task_id: nextTaskId, task_type_id: MARKET_UPDATE_TASK_TYPE_ID });
+  if (typeError) throw typeError;
+
+  const { error } = await supabase
+    .from('properties')
+    .update({ last_update_sent_date: today, listing_update_task_id: nextTaskId })
+    .eq('id', propertyId);
+  if (error) throw error;
 
   if (ownerId) {
     const { error: clientErr } = await supabase.from('clients').update({ last_contact_date: today }).eq('id', ownerId);

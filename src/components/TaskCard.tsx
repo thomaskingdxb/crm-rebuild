@@ -8,7 +8,11 @@ import Modal from '@/components/Modal';
 import SearchableSelect from '@/components/SearchableSelect';
 import SearchableMultiSelect from '@/components/SearchableMultiSelect';
 import ConfirmButton from '@/components/ConfirmButton';
+import SubmitButton from '@/components/SubmitButton';
 import { updateTaskModalAction, deleteTaskModalAction } from '@/app/tasks/actions';
+import { markListingUpdateSentAction } from '@/app/properties/actions';
+import { markChequeDepositedAction } from '@/app/deals/actions';
+import { MARKET_UPDATE_TYPE_NAME, CHEQUE_DEPOSIT_TYPE_NAME } from '@/lib/tasks';
 
 const inputClass =
   'w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500';
@@ -38,6 +42,9 @@ export default function TaskCard({
   const types = task.task_task_types.map((t) => t.task_types.name);
   const selectedTypeIds = new Set(task.task_task_types.map((t) => t.task_types.id));
 
+  const isMarketUpdate = types.includes(MARKET_UPDATE_TYPE_NAME) && !!task.linked_property_id;
+  const isChequeDeposit = types.includes(CHEQUE_DEPOSIT_TYPE_NAME) && !!task.linked_cheque_id;
+
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
       await updateTaskModalAction(task.id, formData);
@@ -52,6 +59,20 @@ export default function TaskCard({
       setOpen(false);
       router.refresh();
     });
+  }
+
+  async function handleMarkUpdateSent() {
+    if (!task.linked_property_id) return;
+    await markListingUpdateSentAction(task.linked_property_id, task.linked_property_owner_id ?? null);
+    setOpen(false);
+    router.refresh();
+  }
+
+  async function handleMarkDeposited() {
+    if (!task.linked_cheque_id) return;
+    await markChequeDepositedAction(task.linked_cheque_id, task.linked_cheque_deal_id ?? undefined);
+    setOpen(false);
+    router.refresh();
   }
 
   return (
@@ -82,7 +103,7 @@ export default function TaskCard({
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} title="Edit Task">
-        <form action={handleSubmit} className="space-y-4">
+        <form id={`task-edit-form-${task.id}`} action={handleSubmit} className="space-y-4">
           <div>
             <label className={labelClass}>Client *</label>
             <SearchableSelect
@@ -129,10 +150,36 @@ export default function TaskCard({
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <button type="submit" disabled={pending} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50">
-              {pending ? 'Saving...' : 'Save Changes'}
-            </button>
+        </form>
+
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            type="submit"
+            form={`task-edit-form-${task.id}`}
+            disabled={pending}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+          >
+            {pending ? 'Saving...' : 'Save Changes'}
+          </button>
+          {isMarketUpdate ? (
+            <form action={handleMarkUpdateSent}>
+              <SubmitButton
+                pendingText="Marking sent..."
+                className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+              >
+                Mark update sent
+              </SubmitButton>
+            </form>
+          ) : isChequeDeposit ? (
+            <form action={handleMarkDeposited}>
+              <SubmitButton
+                pendingText="Marking deposited..."
+                className="rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20 hover:bg-emerald-500/20"
+              >
+                Mark deposited
+              </SubmitButton>
+            </form>
+          ) : (
             <ConfirmButton
               label="Delete Task"
               message="Delete this task?"
@@ -141,8 +188,8 @@ export default function TaskCard({
               onConfirm={handleDelete}
               className="rounded-lg bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-400 ring-1 ring-inset ring-rose-500/20 hover:bg-rose-500/20 disabled:opacity-50"
             />
-          </div>
-        </form>
+          )}
+        </div>
       </Modal>
     </>
   );

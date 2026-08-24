@@ -57,6 +57,13 @@ export interface Task {
 export interface TaskWithRelations extends Task {
   task_task_types: { task_types: Lookup }[];
   clients: { id: string; name: string } | null;
+  // Resolved in getTasks() by reverse-looking-up properties.listing_update_task_id
+  // and rental_cheques.task_id for tasks tagged Market Update / Cheque Deposit,
+  // so TaskCard can swap in the dedicated completion action instead of generic delete.
+  linked_property_id?: string | null;
+  linked_property_owner_id?: string | null;
+  linked_cheque_id?: string | null;
+  linked_cheque_deal_id?: string | null;
 }
 
 export interface Enquiry {

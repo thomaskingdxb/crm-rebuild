@@ -105,11 +105,16 @@ export interface ListingUpdateDue {
   days_since_update: number | null; // null = never sent
 }
 
-// Read-with-upsert-side-effect: every actively-marketed property with no
-// update in 7+ days is returned, and any such property that doesn't yet have
-// a linked task (properties.listing_update_task_id) gets one created here so
-// it surfaces on /tasks. Once markListingUpdateSentAction() clears the task
-// and last_update_sent_date, the next call recreates a fresh task.
+const MARKET_UPDATE_TASK_TYPE_ID = 11;
+
+// Safety net: markListingUpdateSentAction() is now responsible for
+// proactively creating the next cycle's task the moment an update is marked
+// sent (deadline = today + 7 days), so a live task should normally already
+// exist. This function's remaining job is to catch properties that have NO
+// task yet - e.g. a property that just became actively marketed, or any edge
+// case where the listing_update_task_id pointer broke - and give them one
+// (deadline = today, since there's no last_update_sent_date to compute a
+// future date from).
 export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): Promise<ListingUpdateDue[]> {
   const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10);
 
@@ -161,6 +166,11 @@ export async function getListingUpdatesDue(db: SupabaseClient = defaultClient): 
       deadline_date: deadlineDate,
     });
     if (taskError) throw taskError;
+
+    const { error: typeError } = await db
+      .from('task_task_types')
+      .insert({ task_id: taskId, task_type_id: MARKET_UPDATE_TASK_TYPE_ID });
+    if (typeError) throw typeError;
 
     const { error: updateError } = await db
       .from('properties')
