@@ -52,8 +52,13 @@ export default async function NewEnquiryPage({ searchParams }: { searchParams: P
           </div>
 
           <div>
-            <span className={labelClass}>Lead stage</span>
-            <SearchableMultiSelect name="lead_stage_ids" options={lookups.leadStages} defaultSelectedIds={new Set()} placeholder="Search lead stages..." />
+            <label className={labelClass}>Lead stage</label>
+            <SearchableSelect
+              name="lead_stage_id"
+              options={lookups.leadStages.map((s) => ({ id: String(s.id), label: s.name }))}
+              defaultValue={null}
+              placeholder="Search lead stages..."
+            />
           </div>
 
           <div>

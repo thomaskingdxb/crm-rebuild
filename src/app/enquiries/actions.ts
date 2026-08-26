@@ -42,7 +42,15 @@ function readMultiSelectIds(formData: FormData) {
     areaIds: formData.getAll('area_ids').map(Number),
     bedroomIds: formData.getAll('bedroom_ids').map(Number),
     bathroomIds: formData.getAll('bathroom_ids').map(Number),
-    leadStageIds: formData.getAll('lead_stage_ids').map(Number),
+    // Lead stage is a single current stage, not a true multi-select (a lead
+    // progresses through the pipeline, it doesn't hold several stages at
+    // once) - wrap the single selected id into a 0-or-1-element array so it
+    // can still go through the same delete-then-insert sync as everything
+    // else below, without a special-cased sync path.
+    leadStageIds: (() => {
+      const v = num(formData.get('lead_stage_id'));
+      return v != null ? [v] : [];
+    })(),
     viewIds: formData.getAll('view_ids').map(Number),
     developerIds: formData.getAll('developer_ids').map(Number),
     propertyStatusIds: formData.getAll('property_status_ids').map(Number),

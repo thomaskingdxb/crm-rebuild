@@ -73,7 +73,7 @@ export default function EnquiryDetailModal({
   const selectedPropertyTypeIds = new Set(enquiry.enquiry_property_types.map((t) => t.property_types.id));
   const selectedBedroomIds = new Set(enquiry.enquiry_bedroom_counts.map((b) => b.bedroom_counts.id));
   const selectedBathroomIds = new Set(enquiry.enquiry_bathroom_counts.map((b) => b.bathroom_counts.id));
-  const selectedLeadStageIds = new Set(enquiry.enquiry_lead_stages.map((s) => s.lead_stages.id));
+  const currentLeadStageId = enquiry.enquiry_lead_stages[0]?.lead_stages.id ?? null;
   const selectedViewIds = new Set(enquiry.enquiry_view_types.map((v) => v.view_types.id));
   const selectedPropertyStatusIds = new Set(enquiry.enquiry_property_statuses.map((s) => s.property_statuses.id));
   const selectedAreaIds = new Set(enquiry.enquiry_areas.map((a) => a.areas.id));
@@ -146,8 +146,13 @@ export default function EnquiryDetailModal({
         </div>
 
         <div>
-          <span className={labelClass}>Lead stage</span>
-          <SearchableMultiSelect name="lead_stage_ids" options={lookups.leadStages} defaultSelectedIds={selectedLeadStageIds} placeholder="Search lead stages..." />
+          <label className={labelClass}>Lead stage</label>
+          <SearchableSelect
+            name="lead_stage_id"
+            options={lookups.leadStages.map((s) => ({ id: String(s.id), label: s.name }))}
+            defaultValue={currentLeadStageId != null ? String(currentLeadStageId) : null}
+            placeholder="Search lead stages..."
+          />
         </div>
 
         <div>
