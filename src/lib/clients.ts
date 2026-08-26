@@ -51,6 +51,47 @@ export async function getFollowUpClients(db: SupabaseClient = defaultClient): Pr
     .sort((a, b) => (a.follow_up_date! < b.follow_up_date! ? -1 : a.follow_up_date! > b.follow_up_date! ? 1 : 0));
 }
 
+export interface UpcomingBirthday {
+  id: string;
+  name: string;
+  date_of_birth: string;
+  days_until: number; // 0 = today
+  turning_age: number | null;
+}
+
+// Lightweight, display-only - not a task, doesn't affect /tasks or urgency
+// sorting. Only ~9 of 400 clients currently have a date_of_birth on file
+// (2026-08-26), so this will surface more over time as it's filled in via
+// calls/etc, not a comprehensive list today.
+export async function getUpcomingBirthdays(db: SupabaseClient = defaultClient, daysAhead = 3): Promise<UpcomingBirthday[]> {
+  const { data, error } = await db.from('clients').select('id, name, date_of_birth').not('date_of_birth', 'is', null);
+  if (error) throw error;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const results: UpcomingBirthday[] = [];
+  for (const c of data ?? []) {
+    const dob = new Date(c.date_of_birth as string);
+    let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+    if (nextBirthday < today) {
+      nextBirthday = new Date(today.getFullYear() + 1, dob.getMonth(), dob.getDate());
+    }
+    const daysUntil = Math.round((nextBirthday.getTime() - today.getTime()) / 86_400_000);
+    if (daysUntil <= daysAhead) {
+      results.push({
+        id: c.id,
+        name: c.name,
+        date_of_birth: c.date_of_birth as string,
+        days_until: daysUntil,
+        turning_age: nextBirthday.getFullYear() - dob.getFullYear(),
+      });
+    }
+  }
+
+  return results.sort((a, b) => a.days_until - b.days_until);
+}
+
 export async function getClient(id: string, db: SupabaseClient = defaultClient): Promise<ClientListItem | null> {
   const [clientRes, activitiesRes] = await Promise.all([
     db.from('clients').select(CLIENT_SELECT).eq('id', id).single(),

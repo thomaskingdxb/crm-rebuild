@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getDashboardStats } from '@/lib/dashboard';
 import { getGoals, getMonthlySeries } from '@/lib/kpis';
 import { getCoachingCounts } from '@/lib/coaching';
+import { getUpcomingBirthdays } from '@/lib/clients';
 import { createClient } from '@/lib/supabase/server';
 import KpiChart from '@/components/KpiChart';
 
@@ -269,11 +270,12 @@ function dubaiDate(): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const [stats, goals, series, coaching] = await Promise.all([
+  const [stats, goals, series, coaching, birthdays] = await Promise.all([
     getDashboardStats(supabase),
     getGoals(supabase),
     getMonthlySeries(supabase),
     getCoachingCounts(supabase),
+    getUpcomingBirthdays(supabase),
   ]);
 
   return (
@@ -342,6 +344,27 @@ export default async function DashboardPage() {
             sub={coaching.unmatchedLeads > 0 ? `${coaching.unmatchedLeads} new WhatsApp lead${coaching.unmatchedLeads === 1 ? '' : 's'} unmatched` : undefined}
           />
         </div>
+
+        {birthdays.length > 0 && (
+          <div className="mt-6 surface-card p-5">
+            <p className="mb-3 text-sm font-medium text-zinc-300">🎂 Upcoming Birthdays</p>
+            <div className="flex flex-col gap-2">
+              {birthdays.map((b) => (
+                <Link
+                  key={b.id}
+                  href={`/clients/${b.id}`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm ring-1 ring-inset ring-white/10 transition hover:ring-white/20"
+                >
+                  <span className="text-zinc-200">{b.name}</span>
+                  <span className="text-xs text-zinc-500">
+                    {b.days_until === 0 ? 'Today' : b.days_until === 1 ? 'Tomorrow' : `In ${b.days_until} days`}
+                    {b.turning_age != null ? ` · turning ${b.turning_age}` : ''}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between">
