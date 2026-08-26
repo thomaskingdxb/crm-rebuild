@@ -85,6 +85,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4" />
     </svg>
   ),
+  birthdays: (
+    <svg {...iconProps}>
+      <path d="M12 6a2 2 0 1 0-2-2c0 1 .5 1.5 1 2M12 6a2 2 0 1 1 2-2c0 1-.5 1.5-1 2" />
+      <path d="M4 10h16v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" />
+      <path d="M2 10h20M8 6h8" />
+    </svg>
+  ),
 };
 
 function IconBadge({ icon }: { icon: keyof typeof ICONS }) {
@@ -343,28 +350,15 @@ export default async function DashboardPage() {
             valueClassName="text-blue-300"
             sub={coaching.unmatchedLeads > 0 ? `${coaching.unmatchedLeads} new WhatsApp lead${coaching.unmatchedLeads === 1 ? '' : 's'} unmatched` : undefined}
           />
+          <StatCard
+            href="/birthdays"
+            icon="birthdays"
+            title="Upcoming Birthdays"
+            value={`${birthdays.length}`}
+            valueClassName="text-blue-300"
+            sub={birthdays.length > 0 ? `Next: ${birthdays[0].name}, ${birthdays[0].days_until === 0 ? 'today' : birthdays[0].days_until === 1 ? 'tomorrow' : `in ${birthdays[0].days_until}d`}` : 'None in the next 3 days'}
+          />
         </div>
-
-        {birthdays.length > 0 && (
-          <div className="mt-6 surface-card p-5">
-            <p className="mb-3 text-sm font-medium text-zinc-300">🎂 Upcoming Birthdays</p>
-            <div className="flex flex-col gap-2">
-              {birthdays.map((b) => (
-                <Link
-                  key={b.id}
-                  href={`/clients/${b.id}`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm ring-1 ring-inset ring-white/10 transition hover:ring-white/20"
-                >
-                  <span className="text-zinc-200">{b.name}</span>
-                  <span className="text-xs text-zinc-500">
-                    {b.days_until === 0 ? 'Today' : b.days_until === 1 ? 'Tomorrow' : `In ${b.days_until} days`}
-                    {b.turning_age != null ? ` · turning ${b.turning_age}` : ''}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
 
         <div className="mt-6">
           <div className="mb-2 flex items-center justify-between">

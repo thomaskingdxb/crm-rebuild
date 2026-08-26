@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { label: 'Enquiries', href: '/enquiries', available: true },
   { label: 'Pipeline', href: '/pipeline', available: true },
   { label: 'Follow Ups', href: '/follow-ups', available: true },
+  { label: 'Birthdays', href: '/birthdays', available: true },
   { label: 'Deals', href: '/deals', available: true },
   { label: 'Tasks', href: '/tasks', available: true },
   { label: 'Coaching', href: '/coaching', available: false, badge: 'WIP' },
